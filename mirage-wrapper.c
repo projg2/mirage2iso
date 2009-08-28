@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -19,6 +20,20 @@ static MIRAGE_Disc *disc = NULL;
 static MIRAGE_Session *session = NULL;
 static MIRAGE_Track *track = NULL;
 
+static GError *err = NULL;
+
+static const bool miragewrap_err(const char* const format, ...) {
+	va_list ap;
+
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+
+	fprintf(stderr, ": %s\n", err->message);
+	g_error_free(err);
+	return FALSE;
+}
+
 const bool miragewrap_init(void) {
 	g_type_init();
 
@@ -30,23 +45,17 @@ const bool miragewrap_init(void) {
 const bool miragewrap_setinput(const char* const fn) {
 	gchar *_fn = strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
-	GError *err = NULL;
 
-	if (!mirage_mirage_create_disc(mirage, filenames, (GObject**) &disc, NULL, &err) || err) {
-		fprintf(stderr, "Unable to open input '%s': %s\n", fn, err->message);
-		g_error_free(err);
+	if (!mirage_mirage_create_disc(mirage, filenames, (GObject**) &disc, NULL, &err)) {
 		free(_fn);
-		return FALSE;
+		return miragewrap_err("Unable to open input '%s'", fn);
 	}
 	free(_fn);
 
 	gint sessions;
 
-	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err) || err) {
-		fprintf(stderr, "Unable to get session count: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err))
+		return miragewrap_err("Unable to get session count");
 	if (sessions > 1)
 		fprintf(stderr, "NOTE: input file contains %d sessions; mirage2iso will read only the last one.", sessions);
 	else if (sessions == 0) {
@@ -54,19 +63,13 @@ const bool miragewrap_setinput(const char* const fn) {
 		return FALSE;
 	}
 
-	if (!mirage_disc_get_session_by_index(disc, -1, (GObject**) &session, &err) || err) {
-		fprintf(stderr, "Unable to get last session: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_disc_get_session_by_index(disc, -1, (GObject**) &session, &err))
+		return miragewrap_err("Unable to get last session");
 
 	gint tracks;
 
-	if (!mirage_session_get_number_of_tracks(session, &tracks, &err) || err) {
-		fprintf(stderr, "Unable to get track count: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_session_get_number_of_tracks(session, &tracks, &err))
+		return miragewrap_err("Unable to get track count");
 	if (tracks > 1)
 		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one.", tracks);
 	else if (tracks == 0) {
@@ -74,26 +77,19 @@ const bool miragewrap_setinput(const char* const fn) {
 		return FALSE;
 	}
 
-	if (!mirage_session_get_track_by_index(session, 0, (GObject**) &track, &err) || err) {
-		fprintf(stderr, "Unable to get track: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_session_get_track_by_index(session, 0, (GObject**) &track, &err))
+		return miragewrap_err("Unable to get track");
 
 	return TRUE;
 }
 
 const bool miragewrap_output(const int fd) {
-	GError *err = NULL;
 	gint sstart, len, mode;
 	int expssize;
 	size_t expsize;
 
-	if (!mirage_track_get_mode(track, &mode, &err) || err) {
-		fprintf(stderr, "Unable to get track mode: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_track_get_mode(track, &mode, &err))
+		return miragewrap_err("Unable to get track mode");
 	switch (mode) {
 		case MIRAGE_MODE_MODE1:
 			expssize = 2048;
@@ -103,17 +99,11 @@ const bool miragewrap_output(const int fd) {
 			return FALSE;
 	}
 
-	if (!mirage_track_get_track_start(track, &sstart, &err) || err) {
-		fprintf(stderr, "Unable to get track start: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_track_get_track_start(track, &sstart, &err))
+		return miragewrap_err("Unable to get track start");
 
-	if (!mirage_track_layout_get_length(track, &len, &err) || err) {
-		fprintf(stderr, "Unable to get track length: %s\n", err->message);
-		g_error_free(err);
-		return FALSE;
-	}
+	if (!mirage_track_layout_get_length(track, &len, &err))
+		return miragewrap_err("Unable to get track length");
 
 	expsize = expssize * (len-sstart);
 
@@ -128,11 +118,8 @@ const bool miragewrap_output(const int fd) {
 	ftruncate(fd, expsize);
 
 	for (i = sstart; i < len; i++, bufptr += olen) {
-		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, bufptr, &olen, &err) || err) {
-			fprintf(stderr, "Unable to read sector %d: %s\n", i, err->message);
-			g_error_free(err);
-			return FALSE;
-		}
+		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, bufptr, &olen, &err))
+			return miragewrap_err("Unable to read sector %d", i);
 
 		if (olen != expssize) {
 			fprintf(stderr, "Sector %d has incorrect size: %d (instead of %d)\n", i, olen, expssize);
