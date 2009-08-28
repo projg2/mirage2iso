@@ -42,7 +42,7 @@ const bool miragewrap_init(void) {
 	return !!mirage;
 }
 
-const bool miragewrap_setinput(const char* const fn) {
+const bool miragewrap_open(const char* const fn) {
 	gchar *_fn = strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
 

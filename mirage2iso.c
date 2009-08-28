@@ -32,7 +32,7 @@ int main(int argc, char* const argv[]) {
 	if (!miragewrap_init())
 		return EX_SOFTWARE;
 
-	if (!miragewrap_setinput(argv[optind])) {
+	if (!miragewrap_open(argv[optind])) {
 		miragewrap_free();
 		return EX_DATAERR;
 	}
