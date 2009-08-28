@@ -7,5 +7,5 @@
 
 const bool miragewrap_init(void);
 const bool miragewrap_setinput(const char* const fn);
-const bool miragewrap_output(FILE* const f);
+const bool miragewrap_output(const int fd);
 void miragewrap_free(void);

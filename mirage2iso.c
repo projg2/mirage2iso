@@ -37,14 +37,14 @@ int main(int argc, char* const argv[]) {
 		return EX_DATAERR;
 	}
 
-	FILE* const out = fopen(argv[optind+1], "w");
+	FILE* const out = fopen(argv[optind+1], "w+");
 	if (!out) {
 		perror("Unable to open output file");
 		miragewrap_free();
 		return EX_CANTCREAT;
 	}
 
-	if (!miragewrap_output(out)) {
+	if (!miragewrap_output(fileno(out))) {
 		miragewrap_free();
 		return EX_IOERR;
 	}

@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/mman.h>
 
 #include <mirage.h>
 
@@ -79,9 +83,11 @@ const bool miragewrap_setinput(const char* const fn) {
 	return TRUE;
 }
 
-const bool miragewrap_output(FILE* const f) {
+const bool miragewrap_output(const int fd) {
 	GError *err = NULL;
-	gint sstart, len, mode, expsize;
+	gint sstart, len, mode;
+	int expssize;
+	size_t expsize;
 
 	if (!mirage_track_get_mode(track, &mode, &err) || err) {
 		fprintf(stderr, "Unable to get track mode: %s\n", err->message);
@@ -90,7 +96,7 @@ const bool miragewrap_output(FILE* const f) {
 	}
 	switch (mode) {
 		case MIRAGE_MODE_MODE1:
-			expsize = 2048;
+			expssize = 2048;
 			break;
 		default:
 			fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
@@ -109,25 +115,34 @@ const bool miragewrap_output(FILE* const f) {
 		return FALSE;
 	}
 
-	guint8 buf[4096];
+	expsize = expssize * (len-sstart);
+
+	guint8 *buf = mmap(NULL, expsize, PROT_WRITE, MAP_SHARED, fd, 0);
+	guint8 *bufptr = buf;
 	gint i, olen;
 
-	for (i = sstart; i < len; i++) {
-		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, buf, &olen, &err) || err) {
+	if (buf == MAP_FAILED) {
+		perror("mmap() failed");
+		return FALSE;
+	}
+	ftruncate(fd, expsize);
+
+	for (i = sstart; i < len; i++, bufptr += olen) {
+		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, bufptr, &olen, &err) || err) {
 			fprintf(stderr, "Unable to read sector %d: %s\n", i, err->message);
 			g_error_free(err);
 			return FALSE;
 		}
 
-		if (olen != expsize) { /* Mode1 */
-			fprintf(stderr, "Sector %d has incorrect size: %d (instead of %d)\n", i, olen, expsize);
+		if (olen != expssize) {
+			fprintf(stderr, "Sector %d has incorrect size: %d (instead of %d)\n", i, olen, expssize);
 			return FALSE;
 		}
+	}
 
-		if (fwrite(buf, olen, 1, f) != 1) {
-			perror("Unable to write output");
-			return FALSE;
-		}
+	if (munmap(buf, expsize)) {
+		perror("munmap() failed");
+		return FALSE;
 	}
 
 	return TRUE;
