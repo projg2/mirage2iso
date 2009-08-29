@@ -96,64 +96,62 @@ const int miragewrap_get_track_count(void) {
 	return tracks;
 }
 
-const size_t miragewrap_get_track_size(const int track_num) {
+static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *sstart, gint *len) {
 	MIRAGE_Track *track = NULL;
-	gint sstart, len, mode;
-	int expssize;
 
 	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err)) {
 		miragewrap_err("Unable to get track %d", track_num);;
-		return 0;
+		return NULL;
 	}
+
+	if (!mirage_track_get_track_start(track, sstart, &err)) {
+		g_object_unref(track);
+		miragewrap_err("Unable to get track start");
+		return NULL;
+	}
+
+	if (!mirage_track_layout_get_length(track, len, &err)) {
+		g_object_unref(track);
+		miragewrap_err("Unable to get track length");
+		return NULL;
+	}
+
+	return track;
+}
+
+const size_t miragewrap_get_track_size(const int track_num) {
+	gint sstart, len, mode;
+	int expssize;
+	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len);
+
+	if (!track)
+		return 0;
 
 	if (!mirage_track_get_mode(track, &mode, &err)) {
 		g_object_unref(track);
 		miragewrap_err("Unable to get track mode");
 		return 0;
 	}
+	g_object_unref(track);
 
 	switch (mode) {
 		case MIRAGE_MODE_MODE1:
 			expssize = 2048;
 			break;
 		default:
-			g_object_unref(track);
 			fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
 			return 0;
 	}
 
-	if (!mirage_track_get_track_start(track, &sstart, &err)) {
-		g_object_unref(track);
-		miragewrap_err("Unable to get track start");
-		return 0;
-	}
-
-	if (!mirage_track_layout_get_length(track, &len, &err)) {
-		g_object_unref(track);
-		miragewrap_err("Unable to get track length");
-		return 0;
-	}
-
-	g_object_unref(track);
 	return expssize * (len-sstart);
 }
 
 const bool miragewrap_output_track(void *out, const int track_num) {
-	MIRAGE_Track *track = NULL;
 	gint sstart, len;
+	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len);
 
-	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err))
-		return miragewrap_err("Unable to get track %d", track_num);
-
-	if (!mirage_track_get_track_start(track, &sstart, &err)) {
-		g_object_unref(track);
-		return miragewrap_err("Unable to get track start");
-	}
-
-	if (!mirage_track_layout_get_length(track, &len, &err)) {
-		g_object_unref(track);
-		return miragewrap_err("Unable to get track length");
-	}
+	if (!track)
+		return false;
 
 	gint i, olen;
 	const int vlen = verbose ? snprintf(NULL, 0, "%d", len) : 0; /* printf() accepts <= 0 */
