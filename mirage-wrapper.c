@@ -60,14 +60,14 @@ const char* const miragewrap_get_version(void) {
 }
 
 const bool miragewrap_open(const char* const fn, const int session_num) {
-	gchar *_fn = strdup(fn);
+	gchar *_fn = g_strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
 
 	if (!mirage_mirage_create_disc(mirage, filenames, (GObject**) &disc, NULL, &err)) {
 		free(_fn);
 		return miragewrap_err("Unable to open input '%s'", fn);
 	}
-	free(_fn);
+	g_free(_fn);
 
 	gint sessions;
 
