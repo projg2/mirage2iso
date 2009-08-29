@@ -39,6 +39,20 @@ static const bool try_atoi(const char* const val, int* const out) {
 	return true;
 }
 
+static const int output_track(const char* const fn, const int track_num) {
+	FILE* const out = fopen(fn, "w+");
+
+	if (!out) {
+		perror("Unable to open output file");
+		return EX_CANTCREAT;
+	}
+
+	if (!miragewrap_output(fileno(out), track_num))
+		return EX_IOERR;
+
+	return EX_OK;
+}
+
 int main(int argc, char* const argv[]) {
 	int session_num = -1;
 	int arg, val;
@@ -72,16 +86,13 @@ int main(int argc, char* const argv[]) {
 		return EX_DATAERR;
 	}
 
-	FILE* const out = fopen(argv[optind+1], "w+");
-	if (!out) {
-		perror("Unable to open output file");
-		miragewrap_free();
-		return EX_CANTCREAT;
-	}
+	int ret;
+	if (((ret = miragewrap_get_track_count())) > 1)
+		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one.", ret);
 
-	if (!miragewrap_output(fileno(out))) {
+	if (((ret = output_track(argv[optind+1], 0))) != EX_OK) {
 		miragewrap_free();
-		return EX_IOERR;
+		return ret;
 	}
 
 	miragewrap_free();
