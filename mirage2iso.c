@@ -3,11 +3,17 @@
  * 3-clause BSD license
  */
 
+#ifndef NO_MMAPIO
+#	define _POSIX_C_SOURCE 200112L
+#	include <unistd.h>
+#else
+#	define _ISOC99_SOURCE 1
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <sysexits.h>
-#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
