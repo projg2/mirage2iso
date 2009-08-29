@@ -217,7 +217,17 @@ int main(int argc, char* const argv[]) {
 	char* outbuf = NULL;
 	if (!out) {
 		if (!use_stdout) {
-			const char* const ext = strrchr(in, '.');
+			const char* ext = strrchr(in, '.');
+
+			if (!strcmp(ext, ".iso")) {
+				if (!force) {
+					fprintf(stderr, "Input file has .iso suffix and no output file specified\n"
+							"Either specify one or use --force to use '.iso.iso' output suffix\n");
+					return EX_USAGE;
+				}
+				ext = NULL;
+			}
+
 			const int namelen = strlen(in) - (ext ? strlen(ext) : 0);
 
 			outbuf = malloc(namelen + 5);
