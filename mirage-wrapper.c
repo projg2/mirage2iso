@@ -27,8 +27,9 @@ static const bool miragewrap_err(const char* const format, ...) {
 	vfprintf(stderr, format, ap);
 	va_end(ap);
 
-	fprintf(stderr, ": %s\n", err->message);
+	fprintf(stderr, ": %s\n", err ? err->message : "(err undefined?!)");
 	g_error_free(err);
+
 	return false;
 }
 
@@ -43,6 +44,11 @@ const bool miragewrap_init(void) {
 const char* const miragewrap_get_version(void) {
 	static char buf[10];
 	gchar *tmp;
+
+	if (!mirage) {
+		fprintf(stderr, "miragewrap_get_version() has to be called after miragewrap_init()\n");
+		return NULL;
+	}
 
 	if (!mirage_mirage_get_version(mirage, &tmp, &err)) {
 		miragewrap_err("Unable to get libmirage version");
@@ -60,6 +66,11 @@ const char* const miragewrap_get_version(void) {
 }
 
 const bool miragewrap_open(const char* const fn, const int session_num) {
+	if (!mirage) {
+		fprintf(stderr, "miragewrap_open() has to be called after miragewrap_init()\n");
+		return false;
+	}
+
 	gchar *_fn = g_strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
 
@@ -93,6 +104,11 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 }
 
 const int miragewrap_get_track_count(void) {
+	if (!session) {
+		fprintf(stderr, "miragewrap_get_track_count() has to be called after miragewrap_open()\n");
+		return 0;
+	}
+
 	return tracks;
 }
 
@@ -120,6 +136,11 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 }
 
 const size_t miragewrap_get_track_size(const int track_num) {
+	if (!session) {
+		fprintf(stderr, "miragewrap_get_track_size() has to be called after miragewrap_open()\n");
+		return 0;
+	}
+
 	gint sstart, len, mode;
 	int expssize;
 	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len);
@@ -147,6 +168,11 @@ const size_t miragewrap_get_track_size(const int track_num) {
 }
 
 const bool miragewrap_output_track(void *out, const int track_num) {
+	if (!session) {
+		fprintf(stderr, "miragewrap_output_track() has to be called after miragewrap_open()\n");
+		return 0;
+	}
+
 	gint sstart, len;
 	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len);
 
