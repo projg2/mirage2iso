@@ -31,7 +31,7 @@ static const bool miragewrap_err(const char* const format, ...) {
 
 	fprintf(stderr, ": %s\n", err->message);
 	g_error_free(err);
-	return FALSE;
+	return false;
 }
 
 const bool miragewrap_init(void) {
@@ -58,7 +58,7 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 		return miragewrap_err("Unable to get session count");
 	if (sessions == 0) {
 		fprintf(stderr, "Input file doesn't contain any session.");
-		return FALSE;
+		return false;
 	}
 
 	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err)) {
@@ -73,13 +73,13 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one.", tracks);
 	else if (tracks == 0) {
 		fprintf(stderr, "Input session doesn't contain any track.");
-		return FALSE;
+		return false;
 	}
 
 	if (!mirage_session_get_track_by_index(session, 0, (GObject**) &track, &err))
 		return miragewrap_err("Unable to get track");
 
-	return TRUE;
+	return true;
 }
 
 const bool miragewrap_output(const int fd) {
@@ -95,7 +95,7 @@ const bool miragewrap_output(const int fd) {
 			break;
 		default:
 			fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
-			return FALSE;
+			return false;
 	}
 
 	if (!mirage_track_get_track_start(track, &sstart, &err))
@@ -112,7 +112,7 @@ const bool miragewrap_output(const int fd) {
 
 	if (buf == MAP_FAILED) {
 		perror("mmap() failed");
-		return FALSE;
+		return false;
 	}
 	ftruncate(fd, expsize);
 
@@ -122,16 +122,16 @@ const bool miragewrap_output(const int fd) {
 
 		if (olen != expssize) {
 			fprintf(stderr, "Sector %d has incorrect size: %d (instead of %d)\n", i, olen, expssize);
-			return FALSE;
+			return false;
 		}
 	}
 
 	if (munmap(buf, expsize)) {
 		perror("munmap() failed");
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 void miragewrap_free(void) {
