@@ -56,7 +56,7 @@ const char* const miragewrap_get_version(void) {
 	}
 
 	if (strlen(tmp) > 9)
-		fprintf(stderr, "libmirage version string too long: %s", tmp);
+		fprintf(stderr, "libmirage version string too long: %s\n", tmp);
 
 	strncpy(buf, tmp, sizeof(buf)-1);
 	buf[sizeof(buf)-1] = 0;
@@ -85,7 +85,7 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err))
 		return miragewrap_err("Unable to get session count");
 	if (sessions == 0) {
-		fprintf(stderr, "Input file doesn't contain any session.");
+		fprintf(stderr, "Input file doesn't contain any session\n");
 		return false;
 	}
 
@@ -96,7 +96,7 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 		return miragewrap_err("Unable to get track count");
 
 	if (tracks == 0) {
-		fprintf(stderr, "Input session doesn't contain any track.");
+		fprintf(stderr, "Input session doesn't contain any track\n");
 		return false;
 	}
 
@@ -150,7 +150,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 				*sectsize = 2048;
 				break;
 			default:
-				fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.\n");
+				fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry\n");
 				return NULL;
 		}
 	}
@@ -201,7 +201,7 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 		buf = malloc(bufsize);
 
 		if (!buf) {
-			fprintf(stderr, "malloc(%d) for buffer failed", bufsize);
+			fprintf(stderr, "malloc(%d) for buffer failed\n", bufsize);
 			g_object_unref(track);
 			return false;
 		}
@@ -221,7 +221,8 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 		}
 
 		if (olen != bufsize) {
-			fprintf(stderr, "Data read returned %d bytes while %d was expected\n", olen, bufsize);
+			fprintf(stderr, "%sData read returned %d bytes while %d was expected\n",
+					verbose ? "\n" : "", olen, bufsize);
 			g_object_unref(track);
 			if (!use_mmap)
 				free(buf);

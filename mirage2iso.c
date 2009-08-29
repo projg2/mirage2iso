@@ -239,7 +239,7 @@ int main(int argc, char* const argv[]) {
 
 	int ret;
 	if (((ret = miragewrap_get_track_count())) > 1)
-		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one.", ret);
+		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one\n", ret);
 
 	if (((ret = output_track(out, 0))) != EX_OK) {
 		miragewrap_free();
