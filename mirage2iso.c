@@ -5,7 +5,6 @@
 
 #ifndef NO_MMAPIO
 #	define _POSIX_C_SOURCE 200112L
-#	include <unistd.h>
 #else
 #	define _ISOC99_SOURCE 1
 #endif
@@ -21,6 +20,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <getopt.h>
 
 #include "mirage-wrapper.h"
@@ -91,19 +91,30 @@ static const int output_track(const char* const fn, const int track_num) {
 	if (ftruncate(fd, size) == -1) {
 		perror("ftruncate() failed");
 
-		if (errno == EPERM || errno == EINVAL) {
-			/* we can't expand the file, so will use standard I/O */
-			use_mmap = false;
-
-			if (close(fd) == -1)
-				perror("close() failed (trying to reopen anyway)");
-			fd = open(fn, O_WRONLY | O_TRUNC); /* we should have it created already */
-			if (fd == -1) {
-				perror("Unable to reopen output file");
-				return EX_CANTCREAT;
-			}
-		} else
+		if (errno == EPERM || errno == EINVAL)
+			use_mmap = false; /* we can't expand the file, so will use standard I/O */
+		else
 			return EX_IOERR;
+	}
+
+	void *buf;
+
+	if (use_mmap) {
+		buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+		if (buf == MAP_FAILED) {
+			use_mmap = false;
+			perror("mmap() failed (trying mmap-free I/O)");
+		}
+	}
+
+	if (!use_mmap) { /* we tried and we failed */
+		if (close(fd) == -1)
+			perror("close() failed (trying to reopen anyway)");
+		fd = open(fn, O_WRONLY | O_TRUNC); /* we should have it created already */
+		if (fd == -1) {
+			perror("Unable to reopen output file");
+			return EX_CANTCREAT;
+		}
 	}
 #endif
 
@@ -113,19 +124,11 @@ static const int output_track(const char* const fn, const int track_num) {
 	}
 
 #ifndef NO_MMAPIO
-	void *buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
-	if (buf == MAP_FAILED) {
-		perror("mmap() failed");
-		if (close(fd) == -1)
-			perror("close() failed");
-		return EX_IOERR;
-	}
-#endif
-
 	if (!miragewrap_output_track(buf, track_num)) {
-#ifndef NO_MMAPIO
 		if (munmap(buf, size))
 			perror("munmap() failed");
+#else
+	if (0) {
 #endif
 		if (close(fd) == -1)
 			perror("close() failed");
