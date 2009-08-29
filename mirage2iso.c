@@ -103,15 +103,17 @@ static const int output_track(const char* const fn, const int track_num) {
 	void *buf = NULL;
 
 #ifndef NO_MMAPIO
-	if (ftruncate(fileno(f), size) == -1) {
-		perror("ftruncate() failed");
+	if (use_mmap) {
+		if (ftruncate(fileno(f), size) == -1) {
+			perror("ftruncate() failed");
 
-		if (errno == EPERM || errno == EINVAL)
-			use_mmap = false; /* we can't expand the file, so will use standard I/O */
-		else {
-			if (fclose(f))
-				perror("fclose() failed");
-			return EX_IOERR;
+			if (errno == EPERM || errno == EINVAL)
+				use_mmap = false; /* we can't expand the file, so will use standard I/O */
+			else {
+				if (fclose(f))
+					perror("fclose() failed");
+				return EX_IOERR;
+			}
 		}
 	}
 
@@ -123,7 +125,7 @@ static const int output_track(const char* const fn, const int track_num) {
 		}
 	}
 
-	if (!use_mmap) { /* we tried and we failed */
+	if (!use_mmap && !force_stdio) { /* we tried and we failed */
 		if (!(f = freopen(fn, "w", f))) {
 			perror("Unable to reopen output file");
 			return EX_CANTCREAT;
