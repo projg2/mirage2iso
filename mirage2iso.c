@@ -69,9 +69,17 @@ static const bool try_atoi(const char* const val, int* const out) {
 }
 
 static const int output_track(const char* const fn, const int track_num) {
+#ifndef NO_MMAPIO
 	bool use_mmap = true;
+#else
+	bool use_mmap = false;
+#endif
 
-	const int fd = open(fn, O_RDWR|O_CREAT, 0666);
+	size_t size = miragewrap_get_track_size(track_num);
+	if (size == 0)
+		return EX_DATAERR;
+
+	int fd = open(fn, (use_mmap ? O_RDWR : O_WRONLY | O_TRUNC) | O_CREAT, 0666);
 	if (fd == -1) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
@@ -79,21 +87,21 @@ static const int output_track(const char* const fn, const int track_num) {
 	if (verbose)
 		fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
 
-	size_t size = miragewrap_get_track_size(track_num);
-	if (size == 0)
-		return EX_DATAERR;
-
 #ifndef NO_MMAPIO
 	if (ftruncate(fd, size) == -1) {
 		perror("ftruncate() failed");
 
 		if (errno == EPERM || errno == EINVAL) {
-#endif
-			/* if we either don't have ftruncate() or fs doesn't allow us to expand,
-			 * it's better to use standard I/O instead */
-
+			/* we can't expand the file, so will use standard I/O */
 			use_mmap = false;
-#ifndef NO_MMAPIO
+
+			if (close(fd) == -1)
+				perror("close() failed (trying to reopen anyway)");
+			fd = open(fn, O_WRONLY | O_TRUNC); /* we should have it created already */
+			if (fd == -1) {
+				perror("Unable to reopen output file");
+				return EX_CANTCREAT;
+			}
 		} else
 			return EX_IOERR;
 	}
