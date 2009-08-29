@@ -8,10 +8,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
-#include <unistd.h>
-
-#include <sys/types.h>
-#include <sys/mman.h>
 
 #include <mirage.h>
 
@@ -80,18 +76,20 @@ const int miragewrap_get_track_count(void) {
 	return tracks;
 }
 
-const bool miragewrap_output(const int fd, const int track_num) {
+const size_t miragewrap_get_track_size(const int track_num) {
 	MIRAGE_Track *track = NULL;
 	gint sstart, len, mode;
 	int expssize;
-	size_t expsize;
 
-	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err))
-		return miragewrap_err("Unable to get track %d", track_num);
+	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err)) {
+		miragewrap_err("Unable to get track %d", track_num);;
+		return 0;
+	}
 
 	if (!mirage_track_get_mode(track, &mode, &err)) {
 		g_object_unref(track);
-		return miragewrap_err("Unable to get track mode");
+		miragewrap_err("Unable to get track mode");
+		return 0;
 	}
 
 	switch (mode) {
@@ -101,8 +99,31 @@ const bool miragewrap_output(const int fd, const int track_num) {
 		default:
 			g_object_unref(track);
 			fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
-			return false;
+			return 0;
 	}
+
+	if (!mirage_track_get_track_start(track, &sstart, &err)) {
+		g_object_unref(track);
+		miragewrap_err("Unable to get track start");
+		return 0;
+	}
+
+	if (!mirage_track_layout_get_length(track, &len, &err)) {
+		g_object_unref(track);
+		miragewrap_err("Unable to get track length");
+		return 0;
+	}
+
+	g_object_unref(track);
+	return expssize * (len-sstart);
+}
+
+const bool miragewrap_output_track(void *out, const int track_num) {
+	MIRAGE_Track *track = NULL;
+	gint sstart, len;
+
+	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err))
+		return miragewrap_err("Unable to get track %d", track_num);
 
 	if (!mirage_track_get_track_start(track, &sstart, &err)) {
 		g_object_unref(track);
@@ -114,38 +135,16 @@ const bool miragewrap_output(const int fd, const int track_num) {
 		return miragewrap_err("Unable to get track length");
 	}
 
-	expsize = expssize * (len-sstart);
-
-	guint8 *buf = mmap(NULL, expsize, PROT_WRITE, MAP_SHARED, fd, 0);
-	guint8 *bufptr = buf;
 	gint i, olen;
 
-	if (buf == MAP_FAILED) {
-		g_object_unref(track);
-		perror("mmap() failed");
-		return false;
-	}
-	ftruncate(fd, expsize);
-
-	for (i = sstart; i < len; i++, bufptr += olen) {
-		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, bufptr, &olen, &err)) {
+	for (i = sstart; i < len; i++, out += olen) {
+		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, out, &olen, &err)) {
 			g_object_unref(track);
 			return miragewrap_err("Unable to read sector %d", i);
-		}
-
-		if (olen != expssize) {
-			fprintf(stderr, "Sector %d has incorrect size: %d (instead of %d)\n", i, olen, expssize);
-			g_object_unref(track);
-			return false;
 		}
 	}
 
 	g_object_unref(track);
-	if (munmap(buf, expsize)) {
-		perror("munmap() failed");
-		return false;
-	}
-
 	return true;
 }
 

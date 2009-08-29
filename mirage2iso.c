@@ -7,7 +7,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <sysexits.h>
+#include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+
+#include <fcntl.h>
 #include <getopt.h>
 
 #include "mirage-wrapper.h"
@@ -40,15 +46,37 @@ static const bool try_atoi(const char* const val, int* const out) {
 }
 
 static const int output_track(const char* const fn, const int track_num) {
-	FILE* const out = fopen(fn, "w+");
-
-	if (!out) {
+	const int fd = open(fn, O_RDWR|O_CREAT|O_TRUNC, 0666);
+	if (fd == -1) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
 
-	if (!miragewrap_output(fileno(out), track_num))
+	size_t size = miragewrap_get_track_size(track_num);
+	if (size == 0)
+		return EX_DATAERR;
+
+	void *buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+	if (buf == MAP_FAILED) {
+		perror("mmap() failed");
+		if (close(fd) == -1)
+			perror("close() failed");
 		return EX_IOERR;
+	}
+	ftruncate(fd, size);
+
+	if (!miragewrap_output_track(buf, track_num)) {
+		if (munmap(buf, size))
+			perror("munmap() failed");
+		if (close(fd) == -1)
+			perror("close() failed");
+		return EX_IOERR;
+	}
+
+	if (close(fd) == -1) {
+		perror("close() failed");
+		return EX_IOERR;
+	}
 
 	return EX_OK;
 }
