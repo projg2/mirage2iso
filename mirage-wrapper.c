@@ -11,6 +11,8 @@
 
 #include <mirage.h>
 
+extern bool verbose;
+
 static MIRAGE_Mirage *mirage = NULL;
 static MIRAGE_Disc *disc = NULL;
 static MIRAGE_Session *session = NULL;
@@ -38,6 +40,25 @@ const bool miragewrap_init(void) {
 	return !!mirage;
 }
 
+const char* const miragewrap_get_version(void) {
+	static char buf[10];
+	gchar *tmp;
+
+	if (!mirage_mirage_get_version(mirage, &tmp, &err)) {
+		miragewrap_err("Unable to get libmirage version");
+		return NULL;
+	}
+
+	if (strlen(tmp) > 9)
+		fprintf(stderr, "libmirage version string too long: %s", tmp);
+
+	strncpy(buf, tmp, sizeof(buf)-1);
+	buf[sizeof(buf)-1] = 0;
+
+	g_free(tmp);
+	return buf;
+}
+
 const bool miragewrap_open(const char* const fn, const int session_num) {
 	gchar *_fn = strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
@@ -57,9 +78,8 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 		return false;
 	}
 
-	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err)) {
+	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err))
 		return miragewrap_err(session_num == -1 ? "Unable to get last session" : "Unable to get session %d", session_num);
-	}
 
 	if (!mirage_session_get_number_of_tracks(session, &tracks, &err))
 		return miragewrap_err("Unable to get track count");
@@ -136,13 +156,19 @@ const bool miragewrap_output_track(void *out, const int track_num) {
 	}
 
 	gint i, olen;
+	const int vlen = verbose ? snprintf(NULL, 0, "%d", len) : 0; /* printf() accepts <= 0 */
 
-	for (i = sstart; i < len; i++, out += olen) {
+	len--; /* well, now it's rather 'last' */
+	for (i = sstart; i <= len; i++, out += olen) {
+		if (verbose && !(i % 64))
+			fprintf(stderr, "\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
 		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, out, &olen, &err)) {
 			g_object_unref(track);
-			return miragewrap_err("Unable to read sector %d", i);
+			return miragewrap_err("%sUnable to read sector %d", verbose ? "\n" : "", i);
 		}
 	}
+	if (verbose)
+		fprintf(stderr, "\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
 
 	g_object_unref(track);
 	return true;

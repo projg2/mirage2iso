@@ -18,16 +18,25 @@
 
 #include "mirage-wrapper.h"
 
+bool verbose = false;
+
+static const char* const VERSION = "0.0.1_pre";
+
 static const struct option opts[] = {
 	{ "session", required_argument, 0, 's' },
 	{ "help", no_argument, 0, '?' },
+	{ "verbose", no_argument, 0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
 static const int help(const char* argv0) {
-	const char* const msg = "Synopsis: %s <options> <infile> <outfile.iso>\n"
+	const char* const msg = "Synopsis:\n"
+		"\t%s [options] <infile> <outfile.iso>\n"
 		"\nOptions:\n"
-		"\t--session %%d, -s %%d\tSession to use (default: last one)\n";
+		"\t--help, -?\t\tGuess what\n"
+		"\t--session %%d, -s %%d\tSession to use (default: last one)\n"
+		"\t--verbose, -v\t\tReport progress verbosely\n"
+		"\n";
 
 	fprintf(stderr, msg, argv0);
 	return EX_USAGE;
@@ -51,6 +60,8 @@ static const int output_track(const char* const fn, const int track_num) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
+	if (verbose)
+		fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
 
 	size_t size = miragewrap_get_track_size(track_num);
 	if (size == 0)
@@ -63,7 +74,9 @@ static const int output_track(const char* const fn, const int track_num) {
 			perror("close() failed");
 		return EX_IOERR;
 	}
-	ftruncate(fd, size);
+	if (ftruncate(fd, size) == -1)
+		perror("ftruncate() failed");
+		/* we try to carry on but we'll probably get SIGBUS there */
 
 	if (!miragewrap_output_track(buf, track_num)) {
 		if (munmap(buf, size))
@@ -83,13 +96,17 @@ static const int output_track(const char* const fn, const int track_num) {
 
 int main(int argc, char* const argv[]) {
 	int session_num = -1;
-	int arg, val;
 
-	while ((arg = getopt_long(argc, argv, "s:", opts, NULL)) != -1) {
+	int arg;
+
+	while ((arg = getopt_long(argc, argv, "s:v?", opts, NULL)) != -1) {
 		switch (arg) {
 			case 's':
 				if (!try_atoi(optarg, &session_num))
 					fprintf(stderr, "--session requires integer argument which '%s' isn't\n", optarg);
+				break;
+			case 'v':
+				verbose = true;
 				break;
 			case '?':
 				return help(argv[0]);
@@ -109,10 +126,17 @@ int main(int argc, char* const argv[]) {
 	if (!miragewrap_init())
 		return EX_SOFTWARE;
 
+	if (verbose) {
+		const char* const ver = miragewrap_get_version();
+		fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
+	}
+
 	if (!miragewrap_open(argv[optind], session_num)) {
 		miragewrap_free();
 		return EX_DATAERR;
 	}
+	if (verbose)
+		fprintf(stderr, "Input file '%s' open\n", argv[optind]);
 
 	int ret;
 	if (((ret = miragewrap_get_track_count())) > 1)
@@ -122,6 +146,9 @@ int main(int argc, char* const argv[]) {
 		miragewrap_free();
 		return ret;
 	}
+
+	if (verbose)
+		fprintf(stderr, "Done\n");
 
 	miragewrap_free();
 	return EX_OK;
