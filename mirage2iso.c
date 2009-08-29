@@ -30,11 +30,17 @@
 
 bool verbose = false;
 
+#ifndef NO_MMAPIO
+static bool force_stdio = false;
+#endif
+
 static const char* const VERSION = "0.0.1_pre";
 
 static const struct option opts[] = {
-	{ "session", required_argument, 0, 's' },
+	{ "force", no_argument, 0, 'f' },
 	{ "help", no_argument, 0, '?' },
+	{ "session", required_argument, 0, 's' },
+	{ "stdio", no_argument, 0, 'S' },
 	{ "verbose", no_argument, 0, 'v' },
 	{ "version", no_argument, 0, 'V' },
 	{ 0, 0, 0, 0 }
@@ -47,6 +53,9 @@ static const int help(const char* argv0) {
 		"\t--force, -f\t\tForce replacing guessed output file\n"
 		"\t--help, -?\t\tGuess what\n"
 		"\t--session %%d, -s %%d\tSession to use (default: last one)\n"
+#ifndef NO_MMAPIO
+		"\t--stdio, -S\t\tForce using stdio instead of mmap()\n"
+#endif
 		"\t--verbose, -v\t\tReport progress verbosely\n"
 		"\t--version, -V\t\tPrint version number and quit\n"
 		"\n";
@@ -74,7 +83,7 @@ static const bool try_atoi(const char* const val, int* const out) {
 
 static const int output_track(const char* const fn, const int track_num) {
 #ifndef NO_MMAPIO
-	bool use_mmap = true;
+	bool use_mmap = !force_stdio;
 #else
 	bool use_mmap = false;
 #endif
@@ -151,7 +160,7 @@ int main(int argc, char* const argv[]) {
 
 	int arg;
 
-	while ((arg = getopt_long(argc, argv, "fs:vV?", opts, NULL)) != -1) {
+	while ((arg = getopt_long(argc, argv, "fs:SvV?", opts, NULL)) != -1) {
 		switch (arg) {
 			case 'f':
 				force = true;
@@ -159,6 +168,13 @@ int main(int argc, char* const argv[]) {
 			case 's':
 				if (!try_atoi(optarg, &session_num))
 					fprintf(stderr, "--session requires integer argument which '%s' isn't\n", optarg);
+				break;
+			case 'S':
+#ifndef NO_MMAPIO
+				force_stdio = true;
+#else
+				fprintf(stderr, "mirage2iso compiled without mmap support, --stdio is always on\n");
+#endif
 				break;
 			case 'v':
 				verbose = true;
