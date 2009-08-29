@@ -26,6 +26,7 @@ static const struct option opts[] = {
 	{ "session", required_argument, 0, 's' },
 	{ "help", no_argument, 0, '?' },
 	{ "verbose", no_argument, 0, 'v' },
+	{ "version", no_argument, 0, 'V' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -36,10 +37,16 @@ static const int help(const char* argv0) {
 		"\t--help, -?\t\tGuess what\n"
 		"\t--session %%d, -s %%d\tSession to use (default: last one)\n"
 		"\t--verbose, -v\t\tReport progress verbosely\n"
+		"\t--version, -V\t\tPrint version number and quit\n"
 		"\n";
 
 	fprintf(stderr, msg, argv0);
 	return EX_USAGE;
+}
+
+static void version(const bool mirage) {
+	const char* const ver = mirage ? miragewrap_get_version() : NULL;
+	fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
 }
 
 static const bool try_atoi(const char* const val, int* const out) {
@@ -108,6 +115,9 @@ int main(int argc, char* const argv[]) {
 			case 'v':
 				verbose = true;
 				break;
+			case 'V':
+				version(miragewrap_init());
+				return EX_OK;
 			case '?':
 				return help(argv[0]);
 		}
@@ -126,10 +136,8 @@ int main(int argc, char* const argv[]) {
 	if (!miragewrap_init())
 		return EX_SOFTWARE;
 
-	if (verbose) {
-		const char* const ver = miragewrap_get_version();
-		fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
-	}
+	if (verbose)
+		version(true);
 
 	if (!miragewrap_open(argv[optind], session_num)) {
 		miragewrap_free();
