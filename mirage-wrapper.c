@@ -42,7 +42,7 @@ const bool miragewrap_init(void) {
 	return !!mirage;
 }
 
-const bool miragewrap_open(const char* const fn) {
+const bool miragewrap_open(const char* const fn, const int session_num) {
 	gchar *_fn = strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
 
@@ -56,15 +56,14 @@ const bool miragewrap_open(const char* const fn) {
 
 	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err))
 		return miragewrap_err("Unable to get session count");
-	if (sessions > 1)
-		fprintf(stderr, "NOTE: input file contains %d sessions; mirage2iso will read only the last one.", sessions);
-	else if (sessions == 0) {
+	if (sessions == 0) {
 		fprintf(stderr, "Input file doesn't contain any session.");
 		return FALSE;
 	}
 
-	if (!mirage_disc_get_session_by_index(disc, -1, (GObject**) &session, &err))
-		return miragewrap_err("Unable to get last session");
+	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err)) {
+		return miragewrap_err(session_num == -1 ? "Unable to get last session" : "Unable to get session %d", session_num);
+	}
 
 	gint tracks;
 
