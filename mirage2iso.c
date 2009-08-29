@@ -37,6 +37,7 @@ static bool force_stdio = false;
 static const char* const VERSION = "0.0.1_pre";
 
 static const struct option opts[] = {
+	{ "stdout", no_argument, 0, 'c' },
 	{ "force", no_argument, 0, 'f' },
 	{ "help", no_argument, 0, '?' },
 	{ "session", required_argument, 0, 's' },
@@ -56,6 +57,7 @@ static const int help(const char* argv0) {
 #ifndef NO_MMAPIO
 		"\t--stdio, -S\t\tForce using stdio instead of mmap()\n"
 #endif
+		"\t--stdout, -c\t\tOutput image into STDOUT instead of a file\n"
 		"\t--verbose, -v\t\tReport progress verbosely\n"
 		"\t--version, -V\t\tPrint version number and quit\n"
 		"\n";
@@ -82,6 +84,7 @@ static const bool try_atoi(const char* const val, int* const out) {
 }
 
 static const int output_track(const char* const fn, const int track_num) {
+	const bool use_stdout = !fn;
 #ifndef NO_MMAPIO
 	bool use_mmap = !force_stdio;
 #else
@@ -92,13 +95,13 @@ static const int output_track(const char* const fn, const int track_num) {
 	if (size == 0)
 		return EX_DATAERR;
 
-	FILE *f = fopen(fn, use_mmap ? "a+b" : "wb");
+	FILE *f = use_stdout ? stdout : fopen(fn, use_mmap ? "a+b" : "wb");
 	if (!f) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
 	if (verbose)
-		fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
+		fprintf(stderr, "Output file '%s' open for track %d\n", use_stdout ? "(stdout)" : fn, track_num);
 
 	void *buf = NULL;
 
@@ -138,7 +141,7 @@ static const int output_track(const char* const fn, const int track_num) {
 		if (munmap(buf, size))
 			perror("munmap() failed");
 #endif
-		if (fclose(f))
+		if (!use_stdout && fclose(f))
 			perror("fclose() failed");
 		return EX_IOERR;
 	}
@@ -148,7 +151,7 @@ static const int output_track(const char* const fn, const int track_num) {
 		perror("munmap() failed");
 #endif
 
-	if (fclose(f)) {
+	if (!use_stdout && fclose(f)) {
 		perror("fclose() failed");
 		return EX_IOERR;
 	}
@@ -159,11 +162,15 @@ static const int output_track(const char* const fn, const int track_num) {
 int main(int argc, char* const argv[]) {
 	int session_num = -1;
 	bool force = false;
+	bool use_stdout = false;
 
 	int arg;
 
-	while ((arg = getopt_long(argc, argv, "fs:SvV?", opts, NULL)) != -1) {
+	while ((arg = getopt_long(argc, argv, "cfs:SvV?", opts, NULL)) != -1) {
 		switch (arg) {
+			case 'c':
+				use_stdout = true;
+				break;
 			case 'f':
 				force = true;
 				break;
@@ -189,6 +196,17 @@ int main(int argc, char* const argv[]) {
 		}
 	}
 
+	if (use_stdout) {
+#ifndef NO_MMAPIO
+		if (force_stdio)
+			fprintf(stderr, "--stdout already implies --stdio, no need to specify it\n");
+		else
+			force_stdio = true;
+#endif
+		if (force)
+			fprintf(stderr, "--force has no effect when --stdout in use\n");
+	}
+
 	const char* const in = argv[optind];
 	if (!in) {
 		fprintf(stderr, "No input file specified\n");
@@ -198,30 +216,35 @@ int main(int argc, char* const argv[]) {
 	const char* out = argv[optind+1];
 	char* outbuf = NULL;
 	if (!out) {
-		const char* const ext = strrchr(in, '.');
-		const int namelen = strlen(in) - (ext ? strlen(ext) : 0);
+		if (!use_stdout) {
+			const char* const ext = strrchr(in, '.');
+			const int namelen = strlen(in) - (ext ? strlen(ext) : 0);
 
-		outbuf = malloc(namelen + 5);
-		if (!outbuf) {
-			perror("malloc() for output filename failed");
-			return EX_OSERR;
-		}
-		strncpy(outbuf, in, namelen);
-		strcat(outbuf, ".iso");
-
-		if (!force) {
-			FILE *tmp = fopen(outbuf, "r");
-			if (tmp || errno != ENOENT) {
-				if (tmp && fclose(tmp))
-					perror("fclose(tmp) failed");
-
-				fprintf(stderr, "No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
-				free(outbuf);
-				return EX_USAGE;
+			outbuf = malloc(namelen + 5);
+			if (!outbuf) {
+				perror("malloc() for output filename failed");
+				return EX_OSERR;
 			}
-		}
+			strncpy(outbuf, in, namelen);
+			strcat(outbuf, ".iso");
 
-		out = outbuf;
+			if (!force) {
+				FILE *tmp = fopen(outbuf, "r");
+				if (tmp || errno != ENOENT) {
+					if (tmp && fclose(tmp))
+						perror("fclose(tmp) failed");
+
+					fprintf(stderr, "No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
+					free(outbuf);
+					return EX_USAGE;
+				}
+			}
+
+			out = outbuf;
+		}
+	} else if (use_stdout) {
+		fprintf(stderr, "Output file can't be specified with --stdout\n");
+		return EX_USAGE;
 	}
 
 	if (!miragewrap_init())
