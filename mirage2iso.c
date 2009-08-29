@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 
@@ -62,7 +63,9 @@ static const bool try_atoi(const char* const val, int* const out) {
 }
 
 static const int output_track(const char* const fn, const int track_num) {
-	const int fd = open(fn, O_RDWR|O_CREAT|O_TRUNC, 0666);
+	bool use_mmap = true;
+
+	const int fd = open(fn, O_RDWR|O_CREAT, 0666);
 	if (fd == -1) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
@@ -74,6 +77,28 @@ static const int output_track(const char* const fn, const int track_num) {
 	if (size == 0)
 		return EX_DATAERR;
 
+#ifndef NO_MMAPIO
+	if (ftruncate(fd, size) == -1) {
+		perror("ftruncate() failed");
+
+		if (errno == EPERM || errno == EINVAL) {
+#endif
+			/* if we either don't have ftruncate() or fs doesn't allow us to expand,
+			 * it's better to use standard I/O instead */
+
+			use_mmap = false;
+#ifndef NO_MMAPIO
+		} else
+			return EX_IOERR;
+	}
+#endif
+
+	if (!use_mmap) {
+		fprintf(stderr, "mmap-free I/O not implemented yet\n");
+		return EX_SOFTWARE;
+	}
+
+#ifndef NO_MMAPIO
 	void *buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buf == MAP_FAILED) {
 		perror("mmap() failed");
@@ -81,17 +106,22 @@ static const int output_track(const char* const fn, const int track_num) {
 			perror("close() failed");
 		return EX_IOERR;
 	}
-	if (ftruncate(fd, size) == -1)
-		perror("ftruncate() failed");
-		/* we try to carry on but we'll probably get SIGBUS there */
+#endif
 
 	if (!miragewrap_output_track(buf, track_num)) {
+#ifndef NO_MMAPIO
 		if (munmap(buf, size))
 			perror("munmap() failed");
+#endif
 		if (close(fd) == -1)
 			perror("close() failed");
 		return EX_IOERR;
 	}
+
+#ifndef NO_MMAPIO
+	if (munmap(buf, size))
+		perror("munmap() failed");
+#endif
 
 	if (close(fd) == -1) {
 		perror("close() failed");
