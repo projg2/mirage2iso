@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <sysexits.h>
+#include <string.h>
+#include <errno.h>
 
 #ifndef NO_MMAPIO
 #	include <sys/types.h>
@@ -22,8 +23,8 @@
 #	include <unistd.h>
 #endif
 
-#include <errno.h>
 #include <getopt.h>
+#include <sysexits.h>
 
 #include "mirage-wrapper.h"
 
@@ -41,8 +42,9 @@ static const struct option opts[] = {
 
 static const int help(const char* argv0) {
 	const char* const msg = "Synopsis:\n"
-		"\t%s [options] <infile> <outfile.iso>\n"
+		"\t%s [options] <infile> [outfile.iso]\n"
 		"\nOptions:\n"
+		"\t--force, -f\t\tForce replacing guessed output file\n"
 		"\t--help, -?\t\tGuess what\n"
 		"\t--session %%d, -s %%d\tSession to use (default: last one)\n"
 		"\t--verbose, -v\t\tReport progress verbosely\n"
@@ -98,7 +100,7 @@ static const int output_track(const char* const fn, const int track_num) {
 		if (errno == EPERM || errno == EINVAL)
 			use_mmap = false; /* we can't expand the file, so will use standard I/O */
 		else {
-			if (fclose(f) == -1)
+			if (fclose(f))
 				perror("fclose() failed");
 			return EX_IOERR;
 		}
@@ -125,7 +127,7 @@ static const int output_track(const char* const fn, const int track_num) {
 		if (munmap(buf, size))
 			perror("munmap() failed");
 #endif
-		if (fclose(f) == -1)
+		if (fclose(f))
 			perror("fclose() failed");
 		return EX_IOERR;
 	}
@@ -135,7 +137,7 @@ static const int output_track(const char* const fn, const int track_num) {
 		perror("munmap() failed");
 #endif
 
-	if (fclose(f) == -1) {
+	if (fclose(f)) {
 		perror("fclose() failed");
 		return EX_IOERR;
 	}
@@ -145,11 +147,15 @@ static const int output_track(const char* const fn, const int track_num) {
 
 int main(int argc, char* const argv[]) {
 	int session_num = -1;
+	bool force = false;
 
 	int arg;
 
-	while ((arg = getopt_long(argc, argv, "s:v?", opts, NULL)) != -1) {
+	while ((arg = getopt_long(argc, argv, "fs:vV?", opts, NULL)) != -1) {
 		switch (arg) {
+			case 'f':
+				force = true;
+				break;
 			case 's':
 				if (!try_atoi(optarg, &session_num))
 					fprintf(stderr, "--session requires integer argument which '%s' isn't\n", optarg);
@@ -165,14 +171,39 @@ int main(int argc, char* const argv[]) {
 		}
 	}
 
-	if (!argv[optind]) {
+	const char* const in = argv[optind];
+	if (!in) {
 		fprintf(stderr, "No input file specified\n");
 		return help(argv[0]);
 	}
-	
-	if (!argv[optind+1]) {
-		fprintf(stderr, "No output file specified\n");
-		return help(argv[0]);
+
+	const char* out = argv[optind+1];
+	char* outbuf = NULL;
+	if (!out) {
+		const char* const ext = strrchr(in, '.');
+		const int namelen = strlen(in) - (ext ? strlen(ext) : 0);
+
+		outbuf = malloc(namelen + 5);
+		if (!outbuf) {
+			perror("malloc() for output filename failed");
+			return EX_OSERR;
+		}
+		strncpy(outbuf, in, namelen);
+		strcat(outbuf, ".iso");
+
+		if (!force) {
+			FILE *tmp = fopen(outbuf, "r");
+			if (tmp || errno != ENOENT) {
+				if (tmp && fclose(tmp))
+					perror("fclose(tmp) failed");
+
+				fprintf(stderr, "No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
+				free(outbuf);
+				return EX_USAGE;
+			}
+		}
+
+		out = outbuf;
 	}
 
 	if (!miragewrap_init())
@@ -181,21 +212,24 @@ int main(int argc, char* const argv[]) {
 	if (verbose)
 		version(true);
 
-	if (!miragewrap_open(argv[optind], session_num)) {
+	if (!miragewrap_open(in, session_num)) {
 		miragewrap_free();
 		return EX_DATAERR;
 	}
 	if (verbose)
-		fprintf(stderr, "Input file '%s' open\n", argv[optind]);
+		fprintf(stderr, "Input file '%s' open\n", in);
 
 	int ret;
 	if (((ret = miragewrap_get_track_count())) > 1)
 		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one.", ret);
 
-	if (((ret = output_track(argv[optind+1], 0))) != EX_OK) {
+	if (((ret = output_track(out, 0))) != EX_OK) {
 		miragewrap_free();
 		return ret;
 	}
+
+	if (outbuf)
+		free(outbuf);
 
 	if (verbose)
 		fprintf(stderr, "Done\n");
