@@ -150,7 +150,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 				*sectsize = 2048;
 				break;
 			default:
-				fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
+				fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.\n");
 				return NULL;
 		}
 	}
