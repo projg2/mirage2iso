@@ -81,13 +81,15 @@ static const int output_track(const char* const fn, const int track_num) {
 	if (size == 0)
 		return EX_DATAERR;
 
-	FILE *f = fopen(fn, use_mmap ? "r+b" : "wb");
+	FILE *f = fopen(fn, use_mmap ? "a+b" : "wb");
 	if (!f) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
 	if (verbose)
 		fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
+
+	void *buf = NULL;
 
 #ifndef NO_MMAPIO
 	if (ftruncate(fileno(f), size) == -1) {
@@ -101,8 +103,6 @@ static const int output_track(const char* const fn, const int track_num) {
 			return EX_IOERR;
 		}
 	}
-
-	void *buf;
 
 	if (use_mmap) {
 		buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fileno(f), 0);
@@ -120,17 +120,10 @@ static const int output_track(const char* const fn, const int track_num) {
 	}
 #endif
 
-	if (!use_mmap) {
-		fprintf(stderr, "mmap-free I/O not implemented yet\n");
-		return EX_SOFTWARE;
-	}
-
+	if (!miragewrap_output_track(use_mmap ? buf : f, track_num, use_mmap)) {
 #ifndef NO_MMAPIO
-	if (!miragewrap_output_track(buf, track_num)) {
 		if (munmap(buf, size))
 			perror("munmap() failed");
-#else
-	if (0) {
 #endif
 		if (fclose(f) == -1)
 			perror("fclose() failed");

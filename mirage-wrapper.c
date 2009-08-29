@@ -112,7 +112,7 @@ const int miragewrap_get_track_count(void) {
 	return tracks;
 }
 
-static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *sstart, gint *len) {
+static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *sstart, gint *len, int *sectsize) {
 	MIRAGE_Track *track = NULL;
 
 	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err)) {
@@ -120,16 +120,39 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 		return NULL;
 	}
 
-	if (!mirage_track_get_track_start(track, sstart, &err)) {
-		g_object_unref(track);
-		miragewrap_err("Unable to get track start");
-		return NULL;
+	if (sstart) {
+		if (!mirage_track_get_track_start(track, sstart, &err)) {
+			g_object_unref(track);
+			miragewrap_err("Unable to get track start");
+			return NULL;
+		}
 	}
 
-	if (!mirage_track_layout_get_length(track, len, &err)) {
-		g_object_unref(track);
-		miragewrap_err("Unable to get track length");
-		return NULL;
+	if (len) {
+		if (!mirage_track_layout_get_length(track, len, &err)) {
+			g_object_unref(track);
+			miragewrap_err("Unable to get track length");
+			return NULL;
+		}
+	}
+
+	if (sectsize) {
+		gint mode;
+
+		if (!mirage_track_get_mode(track, &mode, &err)) {
+			g_object_unref(track);
+			miragewrap_err("Unable to get track mode");
+			return 0;
+		}
+
+		switch (mode) {
+			case MIRAGE_MODE_MODE1:
+				*sectsize = 2048;
+				break;
+			default:
+				fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
+				return NULL;
+		}
 	}
 
 	return track;
@@ -141,40 +164,27 @@ const size_t miragewrap_get_track_size(const int track_num) {
 		return 0;
 	}
 
-	gint sstart, len, mode;
+	gint sstart, len;
 	int expssize;
-	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len);
 
+	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len, &expssize);
 	if (!track)
 		return 0;
 
-	if (!mirage_track_get_mode(track, &mode, &err)) {
-		g_object_unref(track);
-		miragewrap_err("Unable to get track mode");
-		return 0;
-	}
 	g_object_unref(track);
-
-	switch (mode) {
-		case MIRAGE_MODE_MODE1:
-			expssize = 2048;
-			break;
-		default:
-			fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry.");
-			return 0;
-	}
 
 	return expssize * (len-sstart);
 }
 
-const bool miragewrap_output_track(void *out, const int track_num) {
+const bool miragewrap_output_track(void *out, const int track_num, const bool use_mmap) {
 	if (!session) {
 		fprintf(stderr, "miragewrap_output_track() has to be called after miragewrap_open()\n");
 		return 0;
 	}
 
 	gint sstart, len;
-	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len);
+	int bufsize;
+	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len, &bufsize);
 
 	if (!track)
 		return false;
@@ -182,14 +192,54 @@ const bool miragewrap_output_track(void *out, const int track_num) {
 	gint i, olen;
 	const int vlen = verbose ? snprintf(NULL, 0, "%d", len) : 0; /* printf() accepts <= 0 */
 
+	FILE *f;
+	guint8 *buf;
+	if (!use_mmap) {
+		/* if not using mmap, out is FILE*
+		 * and we need to alloc ourselves a buffer */
+		f = out;
+		buf = malloc(bufsize);
+
+		if (!buf) {
+			fprintf(stderr, "malloc(%d) for buffer failed", bufsize);
+			g_object_unref(track);
+			return false;
+		}
+	} else
+		buf = out;
+
 	len--; /* well, now it's rather 'last' */
-	for (i = sstart; i <= len; i++, out += olen) {
+	for (i = sstart; i <= len; i++) {
 		if (verbose && !(i % 64))
 			fprintf(stderr, "\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
-		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, out, &olen, &err)) {
+
+		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, buf, &olen, &err)) {
 			g_object_unref(track);
+			if (!use_mmap)
+				free(buf);
 			return miragewrap_err("%sUnable to read sector %d", verbose ? "\n" : "", i);
 		}
+
+		if (olen != bufsize) {
+			fprintf(stderr, "Data read returned %d bytes while %d was expected\n", olen, bufsize);
+			g_object_unref(track);
+			if (!use_mmap)
+				free(buf);
+			return false;
+		}
+
+		if (!use_mmap) {
+			if (fwrite(buf, olen, 1, f) != 1) {
+				fprintf(stderr, "%sWrite failed on sector %d%s", verbose ? "\n" : "", i,
+						ferror(f) ? ": " : " but error flag not set\n");
+				if (ferror(f))
+					perror(NULL);
+				g_object_unref(track);
+				free(buf);
+				return false;
+			}
+		} else
+			buf += olen;
 	}
 	if (verbose)
 		fprintf(stderr, "\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
