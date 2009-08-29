@@ -14,13 +14,15 @@
 #include <stdbool.h>
 #include <sysexits.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
+#ifndef NO_MMAPIO
+#	include <sys/types.h>
+#	include <sys/stat.h>
+#	include <sys/mman.h>
+#	include <fcntl.h>
+#	include <unistd.h>
+#endif
 
 #include <errno.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <getopt.h>
 
 #include "mirage-wrapper.h"
@@ -79,8 +81,8 @@ static const int output_track(const char* const fn, const int track_num) {
 	if (size == 0)
 		return EX_DATAERR;
 
-	int fd = open(fn, (use_mmap ? O_RDWR : O_WRONLY | O_TRUNC) | O_CREAT, 0666);
-	if (fd == -1) {
+	FILE *f = fopen(fn, use_mmap ? "r+b" : "wb");
+	if (!f) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
@@ -88,19 +90,22 @@ static const int output_track(const char* const fn, const int track_num) {
 		fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
 
 #ifndef NO_MMAPIO
-	if (ftruncate(fd, size) == -1) {
+	if (ftruncate(fileno(f), size) == -1) {
 		perror("ftruncate() failed");
 
 		if (errno == EPERM || errno == EINVAL)
 			use_mmap = false; /* we can't expand the file, so will use standard I/O */
-		else
+		else {
+			if (fclose(f) == -1)
+				perror("fclose() failed");
 			return EX_IOERR;
+		}
 	}
 
 	void *buf;
 
 	if (use_mmap) {
-		buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+		buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fileno(f), 0);
 		if (buf == MAP_FAILED) {
 			use_mmap = false;
 			perror("mmap() failed (trying mmap-free I/O)");
@@ -108,10 +113,7 @@ static const int output_track(const char* const fn, const int track_num) {
 	}
 
 	if (!use_mmap) { /* we tried and we failed */
-		if (close(fd) == -1)
-			perror("close() failed (trying to reopen anyway)");
-		fd = open(fn, O_WRONLY | O_TRUNC); /* we should have it created already */
-		if (fd == -1) {
+		if (!(f = freopen(fn, "w", f))) {
 			perror("Unable to reopen output file");
 			return EX_CANTCREAT;
 		}
@@ -130,8 +132,8 @@ static const int output_track(const char* const fn, const int track_num) {
 #else
 	if (0) {
 #endif
-		if (close(fd) == -1)
-			perror("close() failed");
+		if (fclose(f) == -1)
+			perror("fclose() failed");
 		return EX_IOERR;
 	}
 
@@ -140,8 +142,8 @@ static const int output_track(const char* const fn, const int track_num) {
 		perror("munmap() failed");
 #endif
 
-	if (close(fd) == -1) {
-		perror("close() failed");
+	if (fclose(f) == -1) {
+		perror("fclose() failed");
 		return EX_IOERR;
 	}
 
