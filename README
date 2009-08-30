@@ -1,0 +1,27 @@
+* mirage2iso *
+
+
+== DESCRIPTION ==
+
+mirage2iso is a simple tool to convert various CD/DVD image formats into
+.iso images through use of libmirage (same one as used by cdemu).
+
+
+== LIMITATIONS ==
+
+Current version of mirage2iso doesn't support multi-track images. If
+such image is converted with it, it tries to find first Mode1 track
+and convert it.
+
+It doesn't support tracks other than Mode1 either, i.e. it is able
+to convert only standard data tracks. It won't work with your PSX games
+and other stuff relying on Mode2.
+
+Note also that it hasn't been widely tested and sometimes it may just
+don't work like it is supposed to.
+
+
+== COPYRIGHT NOTE ==
+
+(c) 2009 Michał Górny
+Released under 3-clause BSD license.
