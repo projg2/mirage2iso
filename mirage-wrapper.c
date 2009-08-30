@@ -123,7 +123,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 	if (sstart) {
 		if (!mirage_track_get_track_start(track, sstart, &err)) {
 			g_object_unref(track);
-			miragewrap_err("Unable to get track start");
+			miragewrap_err("Unable to get track start for track %d", track_num);
 			return NULL;
 		}
 	}
@@ -131,7 +131,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 	if (len) {
 		if (!mirage_track_layout_get_length(track, len, &err)) {
 			g_object_unref(track);
-			miragewrap_err("Unable to get track length");
+			miragewrap_err("Unable to get track length for track %d", track_num);
 			return NULL;
 		}
 	}
@@ -141,7 +141,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 
 		if (!mirage_track_get_mode(track, &mode, &err)) {
 			g_object_unref(track);
-			miragewrap_err("Unable to get track mode");
+			miragewrap_err("Unable to get track mode for track %d", track_num);
 			return 0;
 		}
 
@@ -149,8 +149,16 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 			case MIRAGE_MODE_MODE1:
 				*sectsize = 2048;
 				break;
+			case MIRAGE_MODE_MODE0:
+			case MIRAGE_MODE_AUDIO:
+			case MIRAGE_MODE_MODE2:
+			case MIRAGE_MODE_MODE2_FORM1:
+			case MIRAGE_MODE_MODE2_FORM2:
+			case MIRAGE_MODE_MODE2_MIXED:
+				/* formats unsupported but correct */
+				return NULL;
 			default:
-				fprintf(stderr, "mirage2iso supports only Mode1 tracks, sorry\n");
+				fprintf(stderr, "Unknown track mode (%d) for track %d (newer libmirage?)\n", mode, track_num);
 				return NULL;
 		}
 	}
