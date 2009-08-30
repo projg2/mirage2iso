@@ -270,19 +270,26 @@ int main(int argc, char* const argv[]) {
 	if (verbose)
 		fprintf(stderr, "Input file '%s' open\n", in);
 
-	int ret;
-	if (((ret = miragewrap_get_track_count())) > 1)
-		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first one\n", ret);
+	int tcount;
+	if (((tcount = miragewrap_get_track_count())) > 1)
+		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
 
-	if (((ret = output_track(out, 0))) != EX_OK) {
-		miragewrap_free();
-		return ret;
+	int i, ret = !EX_OK;
+	for (i = 0; ret != EX_OK && i < tcount; i++) {
+		ret = output_track(out, i);
+
+		if (ret != EX_OK && ret != EX_DATAERR) {
+			miragewrap_free();
+			return ret;
+		}
 	}
 
 	if (outbuf)
 		free(outbuf);
 
-	if (verbose)
+	if (ret != EX_OK) /* no valid track found */
+		fprintf(stderr, "No supported track found (audio CD?)\n");
+	else if (verbose)
 		fprintf(stderr, "Done\n");
 
 	miragewrap_free();
