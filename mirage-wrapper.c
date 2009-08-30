@@ -75,6 +75,7 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 	gchar *filenames[] = { _fn, NULL };
 
 	if (!mirage_mirage_create_disc(mirage, filenames, (GObject**) &disc, NULL, &err)) {
+		disc = NULL;
 		free(_fn);
 		return miragewrap_err("Unable to open input '%s'", fn);
 	}
@@ -89,8 +90,10 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 		return false;
 	}
 
-	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err))
+	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err)) {
+		session = NULL;
 		return miragewrap_err(session_num == -1 ? "Unable to get last session" : "Unable to get session %d", session_num);
+	}
 
 	if (!mirage_session_get_number_of_tracks(session, &tracks, &err))
 		return miragewrap_err("Unable to get track count");
@@ -116,6 +119,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 	MIRAGE_Track *track = NULL;
 
 	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err)) {
+		track = NULL;
 		miragewrap_err("Unable to get track %d", track_num);;
 		return NULL;
 	}
