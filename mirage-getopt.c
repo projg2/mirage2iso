@@ -32,7 +32,7 @@ static const bool try_atoi(const char* const val, int* const out) {
 
 #ifndef NO_GETOPT_LONG
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *val) {
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval) {
 	const struct mirage_opt *op;
 	int arrlen = 1, buflen = 1;
 
@@ -74,13 +74,13 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 		if (op->val == ret) {
 			switch (op->arg) {
 				case mirage_arg_int:
-					if (!try_atoi(optarg, &(val->as_int))) {
+					if (!try_atoi(optarg, &(outval->as_int))) {
 						fprintf(stderr, "--%s requires integer argument which '%s' apparently isn't\n", op->name, optarg);
 						return '?';
 					}
 					break;
 				case mirage_arg_str:
-					val->as_str = optarg;
+					outval->as_str = optarg;
 			}
 		}
 	}
@@ -90,7 +90,7 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 
 #else
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *val) {
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval) {
 	static int argindex = 1;
 
 	const struct mirage_opt *op;
@@ -99,25 +99,64 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 		const int i = argindex++;
 		const char *cp = argv[i];
 
+		const struct mirage_opt* opt = NULL;
+		const char *val = NULL;
+
 		if (cp[0] == '-') {
 			cp++;
 			if (cp[0] == '-') {
 				cp++;
-				
+
+				const char* const vp = strchr(cp, '=');
+				const int cl = vp ? vp-cp : strlen(cp);
+
 				for (op = opts; op->name; op++) {
-					if (!strcmp(op->name, cp)) {
-						/* XXX: arguments support */
-						return op->val;
+					if (!strncmp(op->name, cp, cl) && !op->name[cl]) {
+						if (vp) {
+							if (op->arg == mirage_arg_none) {
+								fprintf(stderr, "Option '--%s' doesn't take an argument\n", op->name);
+								return '?';
+							} else
+								val = vp + 1;
+						}
+						opt = op;
+						break;
 					}
 				}
 
-				fprintf(stderr, "Incorrect option: --%s\n", cp);
-				return '?';
+				if (!opt) {
+					fprintf(stderr, "Incorrect option: --%s\n", cp);
+					return '?';
+				}
 			} else { /* short option */
 				/* XXX: short option support */
 				fprintf(stderr, "SHORT-OPT %s @ %d *\n", cp, i);
 				return 0;
 			}
+
+			if (opt->arg != mirage_arg_none) {
+				if (!val) { /* need to fetch argument from next arg */
+					if (!argv[argindex]) {
+						fprintf(stderr, "Option '--%s' requires an argument\n", opt->name);
+						return '?';
+					}
+
+					val = argv[argindex++];
+				}
+
+				switch (opt->arg) {
+					case mirage_arg_int:
+						if (!try_atoi(val, &(outval->as_int))) {
+							fprintf(stderr, "--%s requires integer argument which '%s' apparently isn't\n", opt->name, val);
+							return '?';
+						}
+						break;
+					case mirage_arg_str:
+						outval->as_str = val;
+				}
+			}
+
+			return opt->val;
 		} else {
 			/* XXX: support mixing args & options */
 			fprintf(stderr, "NON-OPT %s @ %d *\n", cp, i);
