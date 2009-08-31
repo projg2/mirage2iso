@@ -1,16 +1,16 @@
-/* mirage2iso; libmirage-based .iso converter
+/* mirage2iso; support of NO_* defines and setting _*_SOURCE
  * (c) 2009 Michał Górny
- * 3-clause BSD license
+ * released under 3-clause BSD license
  */
 
 /* PART ONE: let user disable all of them easily */
 
-#ifdef NO_POSIX /* shortcut to all POSIX-related capabilities */
+#ifdef NO_POSIX
 #	define NO_MMAPIO
 #	define NO_GNU
 #endif
 
-#ifdef NO_GNU /* shortcut to all GNU extensions */
+#ifdef NO_GNU
 #	define NO_GETOPT_LONG
 #endif
 

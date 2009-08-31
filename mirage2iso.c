@@ -1,6 +1,6 @@
 /* mirage2iso; libmirage-based .iso converter
  * (c) 2009 Michał Górny
- * 3-clause BSD license
+ * released under 3-clause BSD license
  */
 
 #include "mirage-features.h"

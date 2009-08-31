@@ -1,6 +1,6 @@
-/* mirage2iso; libmirage-based .iso converter
+/* mirage2iso; libmirage interface
  * (c) 2009 Michał Górny
- * 3-clause BSD license
+ * released under 3-clause BSD license
  */
 
 #include <stdbool.h>

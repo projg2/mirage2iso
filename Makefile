@@ -1,3 +1,7 @@
+# mirage2iso
+# (c) 2009 Michał Górny
+# released under 3-clause BSD license
+
 MIRAGE_CPPFLAGS = $$(pkg-config --cflags libmirage)
 MIRAGE_LDFLAGS = $$(pkg-config --libs-only-L --libs-only-other libmirage)
 MIRAGE_LIBS = $$(pkg-config --libs-only-l libmirage)
