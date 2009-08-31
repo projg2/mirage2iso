@@ -13,7 +13,7 @@
 
 #include <mirage.h>
 
-extern bool verbose;
+extern bool quiet;
 
 static MIRAGE_Mirage *mirage = NULL;
 static MIRAGE_Disc *disc = NULL;
@@ -204,7 +204,7 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 		return false;
 
 	gint i, olen;
-	const int vlen = verbose ? snprintf(NULL, 0, "%d", len) : 0; /* printf() accepts <= 0 */
+	const int vlen = quiet ? 0 : snprintf(NULL, 0, "%d", len); /* printf() accepts <= 0 */
 
 	FILE *f;
 	guint8 *buf;
@@ -224,19 +224,19 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 
 	len--; /* well, now it's rather 'last' */
 	for (i = sstart; i <= len; i++) {
-		if (verbose && !(i % 64))
+		if (!quiet && !(i % 64))
 			fprintf(stderr, "\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
 
 		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, buf, &olen, &err)) {
 			g_object_unref(track);
 			if (!use_mmap)
 				free(buf);
-			return miragewrap_err("%sUnable to read sector %d", verbose ? "\n" : "", i);
+			return miragewrap_err("%sUnable to read sector %d", quiet ? "" : "\n", i);
 		}
 
 		if (olen != bufsize) {
 			fprintf(stderr, "%sData read returned %d bytes while %d was expected\n",
-					verbose ? "\n" : "", olen, bufsize);
+					quiet ? "" : "\n", olen, bufsize);
 			g_object_unref(track);
 			if (!use_mmap)
 				free(buf);
@@ -245,7 +245,7 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 
 		if (!use_mmap) {
 			if (fwrite(buf, olen, 1, f) != 1) {
-				fprintf(stderr, "%sWrite failed on sector %d%s", verbose ? "\n" : "", i,
+				fprintf(stderr, "%sWrite failed on sector %d%s", quiet ? "" : "\n", i,
 						ferror(f) ? ": " : " but error flag not set\n");
 				if (ferror(f))
 					perror(NULL);
@@ -256,7 +256,7 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 		} else
 			buf += olen;
 	}
-	if (verbose)
+	if (!quiet)
 		fprintf(stderr, "\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
 
 	g_object_unref(track);

@@ -32,7 +32,8 @@
 
 #include "mirage-wrapper.h"
 
-bool verbose = false;
+bool quiet = false;
+static bool verbose = false;
 
 #ifndef NO_MMAPIO
 static bool force_stdio = false;
@@ -41,11 +42,12 @@ static bool force_stdio = false;
 static const char* const VERSION = "0.0.1_pre";
 
 static const struct option opts[] = {
-	{ "stdout", no_argument, 0, 'c' },
 	{ "force", no_argument, 0, 'f' },
 	{ "help", no_argument, 0, '?' },
+	{ "quiet", no_argument, 0, 'q' },
 	{ "session", required_argument, 0, 's' },
 	{ "stdio", no_argument, 0, 'S' },
+	{ "stdout", no_argument, 0, 'c' },
 	{ "verbose", no_argument, 0, 'v' },
 	{ "version", no_argument, 0, 'V' },
 	{ 0, 0, 0, 0 }
@@ -57,12 +59,13 @@ static const int help(const char* argv0) {
 		"\nOptions:\n"
 		"\t--force, -f\t\tForce replacing guessed output file\n"
 		"\t--help, -?\t\tGuess what\n"
+		"\t--quiet, -q\t\tDisable progress reporting, output only errors\n"
 		"\t--session %%d, -s %%d\tSession to use (default: last one)\n"
 #ifndef NO_MMAPIO
 		"\t--stdio, -S\t\tForce using stdio instead of mmap()\n"
 #endif
 		"\t--stdout, -c\t\tOutput image into STDOUT instead of a file\n"
-		"\t--verbose, -v\t\tReport progress verbosely\n"
+		"\t--verbose, -v\t\tIncrease progress reporting verbosity\n"
 		"\t--version, -V\t\tPrint version number and quit\n"
 		"\n";
 
@@ -170,13 +173,16 @@ int main(int argc, char* const argv[]) {
 
 	int arg;
 
-	while ((arg = getopt_long(argc, argv, "cfs:SvV?", opts, NULL)) != -1) {
+	while ((arg = getopt_long(argc, argv, "cfqs:SvV?", opts, NULL)) != -1) {
 		switch (arg) {
 			case 'c':
 				use_stdout = true;
 				break;
 			case 'f':
 				force = true;
+				break;
+			case 'q':
+				quiet = true;
 				break;
 			case 's':
 				if (!try_atoi(optarg, &session_num))
@@ -198,6 +204,11 @@ int main(int argc, char* const argv[]) {
 			case '?':
 				return help(argv[0]);
 		}
+	}
+
+	if (quiet && verbose) {
+		fprintf(stderr, "--verbose and --quiet are contrary options, --verbose will have precedence\n");
+		quiet = false;
 	}
 
 	if (use_stdout) {
