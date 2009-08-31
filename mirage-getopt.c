@@ -35,7 +35,7 @@ static const bool try_atoi(const char* const val, int* const out) {
 
 #ifndef NO_GETOPT_LONG
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval) {
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
 	const struct mirage_opt *op;
 	int arrlen = 1, buflen = 1;
 
@@ -70,8 +70,13 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 
 	const int ret = getopt_long(argc, argv, buf, longopts, NULL);
 
-	if (ret == -1) /* done parsing */
-		return -optind;
+	if (ret == -1) { /* done parsing, set up newargv */
+		int i, newargc;
+		for (i = optind, newargc = 0; i < argc; i++)
+			newargv[newargc++] = argv[i];
+		newargv[newargc] = NULL;
+		return -newargc;
+	}
 
 	for (op = opts; op->name; op++) {
 		if (op->val == ret) {
@@ -93,9 +98,10 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 
 #else
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval) {
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
 	static int argindex = 1;
 	static const char* shortptr = NULL;
+	static int newargc = 0;
 
 	const struct mirage_opt *op;
 
@@ -106,7 +112,7 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 		const struct mirage_opt* opt = NULL;
 		const char *val = NULL;
 
-		if (shortptr || (cp[0] == '-' && cp[1])) {
+		if (shortptr || (cp[0] == '-' && cp[1] && (cp[1] != '-' || cp[2]))) {
 			cp++;
 			if (!shortptr && cp[0] == '-') {
 				cp++;
@@ -180,14 +186,18 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 			}
 
 			return opt->val;
-		} else {
-			/* XXX: support mixing args & options */
-			fprintf(stderr, "NON-OPT %s @ %d *\n", cp, i);
-			return -i;
+		} else if (cp[0] == '-' && cp[1] == '-') {
+			int i;
+			for (i = argindex; argv[i]; i++)
+				newargv[newargc++] = argv[i];
+		} else { /* non-option */
+			newargv[newargc++] = cp;
+			continue;
 		}
 	}
 
-	return -argindex;
+	newargv[newargc] = NULL;
+	return -newargc;
 }
 
 #endif
