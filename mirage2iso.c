@@ -61,18 +61,6 @@ static void version(const bool mirage) {
 	fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
 }
 
-static const bool try_atoi(const char* const val, int* const out) {
-	char *end;
-	int tmp;
-
-	tmp = strtol(val, &end, 0);
-	if (end && *end)
-		return false;
-
-	*out = tmp;
-	return true;
-}
-
 static const int output_track(const char* const fn, const int track_num) {
 	const bool use_stdout = !fn;
 #ifndef NO_MMAPIO
@@ -155,8 +143,9 @@ int main(int argc, char* const argv[]) {
 	bool use_stdout = false;
 
 	int arg;
+	union mirage_optarg_val val;
 
-	while ((arg = mirage_getopt(argc, argv, opts)) >= 0) {
+	while ((arg = mirage_getopt(argc, argv, opts, &val)) >= 0) {
 		switch (arg) {
 			case 'c':
 				use_stdout = true;
@@ -168,8 +157,7 @@ int main(int argc, char* const argv[]) {
 				quiet = true;
 				break;
 			case 's':
-				if (!try_atoi(optarg, &session_num))
-					fprintf(stderr, "--session requires integer argument which '%s' isn't\n", optarg);
+				session_num = val.as_int;
 				break;
 			case 'S':
 #ifndef NO_MMAPIO

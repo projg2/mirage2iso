@@ -8,17 +8,30 @@
 
 #ifndef NO_GETOPT_LONG
 #	define _GNU_SOURCE 1
-#	include <stdlib.h>
 #	include <getopt.h>
 #else
 #	define _ISOC99_SOURCE 1
 #	warning "Currently NO_GETOPT_LONG implies *no* argument parsing, sorry."
 #endif
 
+#include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts) {
+static const bool try_atoi(const char* const val, int* const out) {
+	char *end;
+	int tmp;
+
+	tmp = strtol(val, &end, 0);
+	if (end && *end)
+		return false;
+
+	*out = tmp;
+	return true;
+}
+
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *val) {
 #ifndef NO_GETOPT_LONG
 	const struct mirage_opt *op;
 	int arrlen = 1, buflen = 1;
@@ -56,6 +69,21 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 
 	if (ret == -1) /* done parsing */
 		return -optind;
+
+	for (op = opts; op->name; op++) {
+		if (op->val == ret) {
+			switch (op->arg) {
+				case mirage_arg_int:
+					if (!try_atoi(optarg, &(val->as_int))) {
+						fprintf(stderr, "--%s requires integer argument which '%s' apparently isn't\n", op->name, optarg);
+						return '?';
+					}
+					break;
+				case mirage_arg_str:
+					val->as_str = optarg;
+			}
+		}
+	}
 
 	return ret;
 #else
