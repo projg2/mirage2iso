@@ -6,7 +6,7 @@ PROG = mirage2iso
 OBJS = mirage-wrapper.o
 
 DESTDIR = 
-PREFIX = /usr
+PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 
 .SUFFIXES = .o .c

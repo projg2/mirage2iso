@@ -1,0 +1,57 @@
+* mirage2iso install guide *
+
+
+1. PREREQUISITES
+
+ * C99-capable C toolkit,
+ * libmirage < 1.2,
+ * pkg-config.
+
+
+2. CONFIGURATION
+
+mirage2iso doesn't come with any configure script. Basically,
+Makefile directly gathers information about libmirage from pkg-config.
+
+If you don't have pkg-config or libmirage < 1.2 installed, expect
+standard compilation failure with some less or more readable output.
+
+By default, mirage2iso tries to use POSIX C extensions to get mmaped
+I/O. If your system isn't POSIX compliant, you might add '-DNO_POSIX'
+(or directly '-DNO_MMAPIO') to your CPPFLAGS.
+
+
+3. COMPILATION
+
+It's all just plain make. It uses following variables either provided
+in command-line or gathered from environment:
+	CC, CFLAGS, CPPFLAGS, LDFLAGS
+
+If your environment is set right, you may compile it by calling:
+	$ make
+
+As CPPFLAGS mostly isn't rather defined globally, you should use it
+to define compile options, like:
+	$ make CPPFLAGS='-DNO_POSIX'
+to compile on non-POSIX systems.
+
+
+4. INSTALLATION
+
+The Makefile provides 'install' target with following variables
+for fine-tuning installation location:
+	DESTDIR, PREFIX, BINDIR
+
+mirage2iso doesn't internally depend on any of these paths (it is 100%
+location-independent) you may set them to anything. But the preferred
+solution is to use PREFIX as system-wide install prefix (like '/usr')
+and DESTDIR for fake root installs.
+
+To install mirage2iso into /usr/local tree just call:
+	# make install
+But when creating packages you should probably instead use:
+	# make PREFIX=/usr DESTDIR="${D}" install
+where "${D}" is the fake root dir.
+
+
+* (c) 2009 Michał Górny, released under 3-clause BSD license *
