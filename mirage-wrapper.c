@@ -3,6 +3,8 @@
  * 3-clause BSD license
  */
 
+#define _ISOC99_SOURCE 1
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>

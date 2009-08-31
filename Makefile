@@ -14,10 +14,10 @@ BINDIR = $(PREFIX)/bin
 all: $(PROG)
 
 $(PROG): $(PROG).c $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(MIRAGE_LDFLAGS) -o $@ $< $(OBJS) $(MIRAGE_LIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(MIRAGE_LDFLAGS) -o $@ $< $(OBJS) $(MIRAGE_LIBS)
 
 .c.o:
-	$(CC) $(CFLAGS) $(MIRAGE_CPPFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(MIRAGE_CPPFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(PROG) $(OBJS)

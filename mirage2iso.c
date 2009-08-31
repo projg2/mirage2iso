@@ -3,6 +3,10 @@
  * 3-clause BSD license
  */
 
+#ifdef NO_POSIX /* shortcut to all POSIX-related capabilities */
+#	define NO_MMAPIO
+#endif
+
 #ifndef NO_MMAPIO
 #	define _POSIX_C_SOURCE 200112L
 #else
