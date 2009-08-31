@@ -156,7 +156,7 @@ int main(int argc, char* const argv[]) {
 
 	int arg;
 
-	while ((arg = mirage_getopt(argc, argv, opts)) != -1) {
+	while ((arg = mirage_getopt(argc, argv, opts)) >= 0) {
 		switch (arg) {
 			case 'c':
 				use_stdout = true;
@@ -205,13 +205,13 @@ int main(int argc, char* const argv[]) {
 			fprintf(stderr, "--force has no effect when --stdout in use\n");
 	}
 
-	const char* const in = argv[optind];
+	const char* const in = argv[-arg];
 	if (!in) {
 		fprintf(stderr, "No input file specified\n");
 		return help(argv[0]);
 	}
 
-	const char* out = argv[optind+1];
+	const char* out = argv[-arg+1];
 	char* outbuf = NULL;
 	if (!out) {
 		if (!use_stdout) {

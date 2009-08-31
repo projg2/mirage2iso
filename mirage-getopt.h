@@ -3,10 +3,6 @@
  * released under 3-clause BSD license
  */
 
-#ifdef NO_GETOPT_LONG
-int optind;
-#endif
-
 enum mirage_optarg {
 	mirage_arg_none,
 	mirage_arg_int
@@ -19,5 +15,5 @@ struct mirage_opt {
 	const char* const help;
 };
 
-const short int mirage_getopt(int argc, char* const argv[], const struct mirage_opt* const opts);
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts);
 void mirage_getopt_help(const char* const argv0, const char* const synopsis, const struct mirage_opt* const opts);

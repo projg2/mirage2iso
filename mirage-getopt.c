@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
-const short int mirage_getopt(int argc, char* const argv[], const struct mirage_opt* const opts) {
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts) {
 #ifndef NO_GETOPT_LONG
 	const struct mirage_opt *op;
 	int arrlen = 1, buflen = 1;
@@ -52,10 +52,13 @@ const short int mirage_getopt(int argc, char* const argv[], const struct mirage_
 	*bufptr = 0;
 	memset(optptr, 0, sizeof(*optptr));
 
-	return getopt_long(argc, argv, buf, longopts, NULL);
-#else
-	optind = 1;
+	const int ret = getopt_long(argc, argv, buf, longopts, NULL);
 
+	if (ret == -1) /* done parsing */
+		return -optind;
+
+	return ret;
+#else
 	return -1;
 #endif
 }
