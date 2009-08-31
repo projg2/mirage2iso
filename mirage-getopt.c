@@ -11,7 +11,6 @@
 #	include <getopt.h>
 #else
 #	define _ISOC99_SOURCE 1
-#	warning "Currently NO_GETOPT_LONG implies *no* argument parsing, sorry."
 #endif
 
 #include <stdlib.h>
@@ -31,8 +30,9 @@ static const bool try_atoi(const char* const val, int* const out) {
 	return true;
 }
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *val) {
 #ifndef NO_GETOPT_LONG
+
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *val) {
 	const struct mirage_opt *op;
 	int arrlen = 1, buflen = 1;
 
@@ -86,10 +86,49 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 	}
 
 	return ret;
-#else
-	return -1;
-#endif
 }
+
+#else
+
+const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *val) {
+	static int argindex = 1;
+
+	const struct mirage_opt *op;
+
+	while (argindex < argc) {
+		const int i = argindex++;
+		const char *cp = argv[i];
+
+		if (cp[0] == '-') {
+			cp++;
+			if (cp[0] == '-') {
+				cp++;
+				
+				for (op = opts; op->name; op++) {
+					if (!strcmp(op->name, cp)) {
+						/* XXX: arguments support */
+						return op->val;
+					}
+				}
+
+				fprintf(stderr, "Incorrect option: --%s\n", cp);
+				return '?';
+			} else { /* short option */
+				/* XXX: short option support */
+				fprintf(stderr, "SHORT-OPT %s @ %d *\n", cp, i);
+				return 0;
+			}
+		} else {
+			/* XXX: support mixing args & options */
+			fprintf(stderr, "NON-OPT %s @ %d *\n", cp, i);
+			return -i;
+		}
+	}
+
+	return -argindex;
+}
+
+#endif
 
 void mirage_getopt_help(const char* const argv0, const char* const synopsis, const struct mirage_opt* const opts) {
 	const char* const msg =
