@@ -52,7 +52,7 @@ static const struct mirage_opt opts[] = {
 };
 
 static const int help(const char* argv0) {
-	mirage_getopt_help(argv0, "[options] <infile> [outfile.iso]", opts);
+	mirage_getopt_help(*argv0 ? argv0 : "mirage2iso", "[options] <infile> [outfile.iso]", opts);
 	return EX_USAGE;
 }
 
@@ -137,7 +137,7 @@ static const int output_track(const char* const fn, const int track_num) {
 	return EX_OK;
 }
 
-int main(int argc, char* const argv[]) {
+int main(const int argc, char* const argv[]) {
 	int session_num = -1;
 	bool force = false;
 	bool use_stdout = false;
