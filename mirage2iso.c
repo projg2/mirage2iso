@@ -33,7 +33,7 @@
 #include "mirage-wrapper.h"
 
 bool quiet = false;
-static bool verbose = false;
+bool verbose = false;
 
 #ifndef NO_MMAPIO
 static bool force_stdio = false;
@@ -213,12 +213,12 @@ int main(int argc, char* const argv[]) {
 
 	if (use_stdout) {
 #ifndef NO_MMAPIO
-		if (force_stdio)
+		if (force_stdio && !quiet)
 			fprintf(stderr, "--stdout already implies --stdio, no need to specify it\n");
 		else
 			force_stdio = true;
 #endif
-		if (force)
+		if (force && !quiet)
 			fprintf(stderr, "--force has no effect when --stdout in use\n");
 	}
 
@@ -286,7 +286,7 @@ int main(int argc, char* const argv[]) {
 		fprintf(stderr, "Input file '%s' open\n", in);
 
 	int tcount;
-	if (((tcount = miragewrap_get_track_count())) > 1)
+	if (((tcount = miragewrap_get_track_count())) > 1 && !quiet)
 		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
 
 	int i, ret = !EX_OK;

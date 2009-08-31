@@ -14,6 +14,7 @@
 #include <mirage.h>
 
 extern bool quiet;
+extern bool verbose;
 
 static MIRAGE_Mirage *mirage = NULL;
 static MIRAGE_Disc *disc = NULL;
@@ -151,21 +152,41 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 			return 0;
 		}
 
+		const char* unsupp_desc = NULL;
 		switch (mode) {
+			/* supported modes, we set *sectsize and leave unsupp_desc NULL */
 			case MIRAGE_MODE_MODE1:
 				*sectsize = 2048;
 				break;
+			/* unsupported modes, we leave *sectsize unmodified and set unsupp_desc */
 			case MIRAGE_MODE_MODE0:
+				unsupp_desc = "a Mode 0";
+				break;
 			case MIRAGE_MODE_AUDIO:
+				unsupp_desc = "an audio";
+				break;
 			case MIRAGE_MODE_MODE2:
+				unsupp_desc = "a Mode 2";
+				break;
 			case MIRAGE_MODE_MODE2_FORM1:
+				unsupp_desc = "a Mode 2 Form 1";
+				break;
 			case MIRAGE_MODE_MODE2_FORM2:
+				unsupp_desc = "a Mode 2 Form 2";
+				break;
 			case MIRAGE_MODE_MODE2_MIXED:
-				/* formats unsupported but correct */
-				return NULL;
+				unsupp_desc = "a mixed Mode 2";
+				break;
+			/* unknown mode, report it even if non-verbose and leave now */
 			default:
 				fprintf(stderr, "Unknown track mode (%d) for track %d (newer libmirage?)\n", mode, track_num);
 				return NULL;
+		}
+
+		if (unsupp_desc) { /* got unsupported mode */
+			if (verbose)
+				fprintf(stderr, "Track %d is %s track (unsupported)\n", track_num, unsupp_desc);
+			return NULL;
 		}
 	}
 
