@@ -17,11 +17,14 @@ If you don't have pkg-config or libmirage < 1.2 installed, expect
 standard compilation failure with some less or more readable output.
 
 By default, mirage2iso uses GNU & POSIX C extensions. You can disable
-them by either defining NO_GNU or NO_POSIX (second implies first). You
-can disable only specific features too using following defines:
-	-DNO_GETOPT_LONG (GNU ext)
-		disable use of getopt_long()
-	-DNO_MMAPIO (POSIX ext)
+them by either defining NO_GNU, NO_BSD or NO_POSIX (each next implies
+previous one). You can disable only specific features too using
+following defines:
+	-DNO_GETOPT_LONG (GNU)
+		disable use of getopt_long() in favor of internal parser
+	-DNO_SYSEXITS (BSD)
+		disable use of <sysexits.h> header in favor of hardcoded values
+	-DNO_MMAPIO (POSIX)
 		disable use of ftruncate() and mmap() to get mmaped I/O
 
 

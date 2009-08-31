@@ -5,6 +5,11 @@
 
 #ifdef NO_POSIX
 #	define NO_MMAPIO
+#	define NO_BSD
+#endif
+
+#ifdef NO_BSD
+#	define NO_SYSEXITS
 #	define NO_GNU
 #endif
 

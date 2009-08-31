@@ -25,7 +25,18 @@
 #	include <unistd.h>
 #endif
 
-#include <sysexits.h>
+#ifndef NO_SYSEXITS
+#	include <sysexits.h>
+#else
+#	define EX_OK 0
+#	define EX_USAGE 64
+#	define EX_DATAERR 65
+#	define EX_NOINPUT 66
+#	define EX_SOFTWARE 70
+#	define EX_OSERR 71
+#	define EX_CANTCREAT 73
+#	define EX_IOERR 74
+#endif
 
 #include "mirage-getopt.h"
 #include "mirage-wrapper.h"
@@ -252,7 +263,7 @@ int main(const int argc, char* const argv[]) {
 
 	if (!miragewrap_open(in, session_num)) {
 		miragewrap_free();
-		return EX_DATAERR;
+		return EX_NOINPUT;
 	}
 	if (verbose)
 		fprintf(stderr, "Input file '%s' open\n", in);
