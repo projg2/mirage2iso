@@ -232,7 +232,7 @@ int main(int argc, char* const argv[]) {
 		if (!use_stdout) {
 			const char* ext = strrchr(in, '.');
 
-			if (!strcmp(ext, ".iso")) {
+			if (ext && !strcmp(ext, ".iso")) {
 				if (!force) {
 					fprintf(stderr, "Input file has .iso suffix and no output file specified\n"
 							"Either specify one or use --force to use '.iso.iso' output suffix\n");
