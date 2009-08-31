@@ -89,6 +89,9 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 					break;
 				case mirage_arg_str:
 					outval->as_str = optarg;
+					break;
+				case mirage_arg_none:
+					break;
 			}
 		}
 	}
@@ -212,9 +215,11 @@ void mirage_getopt_help(const char* const argv0, const char* const synopsis, con
 
 	const struct mirage_opt* op;
 	for (op = opts; op->name; op++) {
-		const char* formatspec = "";
+		const char* formatspec;
 		switch (op->arg) {
 			case mirage_arg_int: formatspec = " %d"; break;
+			case mirage_arg_str: formatspec = " %s"; break;
+			case mirage_arg_none: formatspec = "";
 		}
 
 		const char* const addtab = (strlen(op->name) + 2 * strlen(formatspec)) >= 10 ? "" : "\t";
