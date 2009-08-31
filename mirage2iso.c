@@ -5,6 +5,12 @@
 
 #include "mirage-features.h"
 
+#ifndef NO_MMAPIO
+#	define _POSIX_C_SOURCE 200112L
+#else
+#	define _ISOC99_SOURCE 1
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
