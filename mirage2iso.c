@@ -3,15 +3,7 @@
  * 3-clause BSD license
  */
 
-#ifdef NO_POSIX /* shortcut to all POSIX-related capabilities */
-#	define NO_MMAPIO
-#endif
-
-#ifndef NO_MMAPIO
-#	define _POSIX_C_SOURCE 200112L
-#else
-#	define _ISOC99_SOURCE 1
-#endif
+#include "mirage-features.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,6 +17,10 @@
 #	include <sys/mman.h>
 #	include <fcntl.h>
 #	include <unistd.h>
+#endif
+
+#ifdef NO_GETOPT_LONG
+#	error "getopt_long()-lessness not yet supported, sorry."
 #endif
 
 #include <getopt.h>
