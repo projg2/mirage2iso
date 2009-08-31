@@ -22,6 +22,9 @@ static const bool try_atoi(const char* const val, int* const out) {
 	char *end;
 	int tmp;
 
+	if (!*val)
+		return false;
+
 	tmp = strtol(val, &end, 0);
 	if (end && *end)
 		return false;
@@ -92,6 +95,7 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 
 const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval) {
 	static int argindex = 1;
+	static const char* shortptr = NULL;
 
 	const struct mirage_opt *op;
 
@@ -102,9 +106,9 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 		const struct mirage_opt* opt = NULL;
 		const char *val = NULL;
 
-		if (cp[0] == '-') {
+		if (shortptr || (cp[0] == '-' && cp[1])) {
 			cp++;
-			if (cp[0] == '-') {
+			if (!shortptr && cp[0] == '-') {
 				cp++;
 
 				const char* const vp = strchr(cp, '=');
@@ -129,9 +133,28 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 					return '?';
 				}
 			} else { /* short option */
-				/* XXX: short option support */
-				fprintf(stderr, "SHORT-OPT %s @ %d *\n", cp, i);
-				return 0;
+				if (!shortptr)
+					shortptr = cp;
+				cp = shortptr++;
+
+				for (op = opts; op->name; op++) {
+					if (op->val == *cp) {
+						if (op->arg != mirage_arg_none && *shortptr) /* value coming */
+							val = shortptr;
+						opt = op;
+						break;
+					}
+				}
+
+				if (*shortptr && !val) { /* next short arg coming? */
+					argindex--;
+				} else
+					shortptr = NULL;
+
+				if (!opt) {
+					fprintf(stderr, "Incorrect option: -%c\n", *cp);
+					return '?';
+				}
 			}
 
 			if (opt->arg != mirage_arg_none) {
@@ -147,7 +170,7 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 				switch (opt->arg) {
 					case mirage_arg_int:
 						if (!try_atoi(val, &(outval->as_int))) {
-							fprintf(stderr, "--%s requires integer argument which '%s' apparently isn't\n", opt->name, val);
+							fprintf(stderr, "'--%s' requires integer argument which '%s' apparently isn't\n", opt->name, val);
 							return '?';
 						}
 						break;
