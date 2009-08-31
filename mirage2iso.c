@@ -25,13 +25,9 @@
 #	include <unistd.h>
 #endif
 
-#ifdef NO_GETOPT_LONG
-#	error "getopt_long()-lessness not yet supported, sorry."
-#endif
-
-#include <getopt.h>
 #include <sysexits.h>
 
+#include "mirage-getopt.h"
 #include "mirage-wrapper.h"
 
 bool quiet = false;
@@ -175,7 +171,7 @@ int main(int argc, char* const argv[]) {
 
 	int arg;
 
-	while ((arg = getopt_long(argc, argv, "cfqs:SvV?", opts, NULL)) != -1) {
+	while ((arg = mirage_getopt(argc, argv, opts)) != -1) {
 		switch (arg) {
 			case 'c':
 				use_stdout = true;
