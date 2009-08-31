@@ -39,35 +39,20 @@ static bool force_stdio = false;
 
 static const char* const VERSION = "0.0.1_pre";
 
-static const struct option opts[] = {
-	{ "force", no_argument, 0, 'f' },
-	{ "help", no_argument, 0, '?' },
-	{ "quiet", no_argument, 0, 'q' },
-	{ "session", required_argument, 0, 's' },
-	{ "stdio", no_argument, 0, 'S' },
-	{ "stdout", no_argument, 0, 'c' },
-	{ "verbose", no_argument, 0, 'v' },
-	{ "version", no_argument, 0, 'V' },
+static const struct mirage_opt opts[] = {
+	{ "force", mirage_arg_none, 'f', "Force replacing guessed output file" },
+	{ "help", mirage_arg_none, '?', "Take a wild guess" },
+	{ "quiet", mirage_arg_none, 'q', "Disable progress reporting, output only errors" },
+	{ "session", mirage_arg_int, 's', "Session to use (default: last one)" },
+	{ "stdio", mirage_arg_none, 'S', "Force using stdio instead of mmap()" },
+	{ "stdout", mirage_arg_none, 'c', "Output image into STDOUT instead of a file" },
+	{ "verbose", mirage_arg_none, 'v', "Increase progress reporting verbosity" },
+	{ "version", mirage_arg_none, 'V', "Print version number and quit" },
 	{ 0, 0, 0, 0 }
 };
 
 static const int help(const char* argv0) {
-	const char* const msg = "Synopsis:\n"
-		"\t%s [options] <infile> [outfile.iso]\n"
-		"\nOptions:\n"
-		"\t--force, -f\t\tForce replacing guessed output file\n"
-		"\t--help, -?\t\tGuess what\n"
-		"\t--quiet, -q\t\tDisable progress reporting, output only errors\n"
-		"\t--session %%d, -s %%d\tSession to use (default: last one)\n"
-#ifndef NO_MMAPIO
-		"\t--stdio, -S\t\tForce using stdio instead of mmap()\n"
-#endif
-		"\t--stdout, -c\t\tOutput image into STDOUT instead of a file\n"
-		"\t--verbose, -v\t\tIncrease progress reporting verbosity\n"
-		"\t--version, -V\t\tPrint version number and quit\n"
-		"\n";
-
-	fprintf(stderr, msg, argv0);
+	mirage_getopt_help(argv0, "[options] <infile> [outfile.iso]", opts);
 	return EX_USAGE;
 }
 

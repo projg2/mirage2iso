@@ -3,24 +3,21 @@
  * released under 3-clause BSD license
  */
 
-#ifndef NO_GETOPT_LONG
-#	include <getopt.h>
-#else
-
-enum option_has_arg {
-	no_argument,
-	required_argument
-};
-
-struct option {
-	const char *name;
-	enum option_has_arg has_arg;
-	int *flag;
-	int val;
-};
-
+#ifdef NO_GETOPT_LONG
 int optind;
-
 #endif
 
-const int mirage_getopt(int argc, char* const argv[], const struct option *longopts);
+enum mirage_optarg {
+	mirage_arg_none,
+	mirage_arg_int
+};
+
+struct mirage_opt {
+	const char* const name;
+	enum mirage_optarg arg;
+	short int val;
+	const char* const help;
+};
+
+const short int mirage_getopt(int argc, char* const argv[], const struct mirage_opt* const opts);
+void mirage_getopt_help(const char* const argv0, const char* const synopsis, const struct mirage_opt* const opts);

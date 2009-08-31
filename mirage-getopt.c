@@ -4,51 +4,79 @@
  */
 
 #include "mirage-features.h"
+#include "mirage-getopt.h"
 
 #ifndef NO_GETOPT_LONG
+#	define _GNU_SOURCE 1
+#	include <stdlib.h>
+#	include <getopt.h>
+#else
+#	define _ISOC99_SOURCE 1
+#	warning "Currently NO_GETOPT_LONG implies *no* argument parsing, sorry."
+#endif
 
-#define _GNU_SOURCE 1
-#include <stdlib.h>
-#include <getopt.h>
+#include <stdio.h>
+#include <string.h>
 
-const int mirage_getopt(int argc, char* const argv[], const struct option *longopts) {
-	const struct option *op;
-	int len = 1; /* trailing \0 */
+const short int mirage_getopt(int argc, char* const argv[], const struct mirage_opt* const opts) {
+#ifndef NO_GETOPT_LONG
+	const struct mirage_opt *op;
+	int arrlen = 1, buflen = 1;
 
-	for (op = longopts; op->name; op++) {
+	for (op = opts; op->name; op++) {
+		arrlen++;
 		if (op->val) {
-			len++;
-			if (op->has_arg != no_argument)
-				len++;
+			buflen++;
+			if (op->arg != mirage_arg_none)
+				buflen++;
 		}
 	}
 
-	char buf[len];
+	char buf[buflen + 1];
+	struct option longopts[arrlen + 1];
 	char* bufptr = buf;
+	struct option *optptr = longopts;
 
-	for (op = longopts; op->name; op++) {
+	for (op = opts; op->name; op++, optptr++) {
+		optptr->name = op->name;
+		optptr->has_arg = op->arg == mirage_arg_none ? no_argument : required_argument;
+		optptr->flag = NULL;
+		optptr->val = op->val;
+
 		if (op->val) {
 			*(bufptr++) = op->val;
-			if (op->has_arg == required_argument)
+			if (op->arg != mirage_arg_none)
 				*(bufptr++) = ':';
 		}
 	}
 	*bufptr = 0;
+	memset(optptr, 0, sizeof(*optptr));
 
 	return getopt_long(argc, argv, buf, longopts, NULL);
-}
-
 #else
-
-#define _ISOC99_SOURCE 1
-#include "mirage-getopt.h"
-
-#warning "Currently NO_GETOPT_LONG implies *no* argument parsing, sorry."
-
-const int mirage_getopt(int argc, char* const argv[], const struct option *longopts) {
 	optind = 1;
 
 	return -1;
+#endif
 }
 
-#endif
+void mirage_getopt_help(const char* const argv0, const char* const synopsis, const struct mirage_opt* const opts) {
+	const char* const msg =
+		"Synopsis:\n"
+		"\t%s %s\n\n"
+		"Options:\n";
+
+	fprintf(stderr, msg, argv0, synopsis);
+
+	const struct mirage_opt* op;
+	for (op = opts; op->name; op++) {
+		const char* formatspec = "";
+		switch (op->arg) {
+			case mirage_arg_int: formatspec = " %d"; break;
+		}
+
+		const char* const addtab = (strlen(op->name) + 2 * strlen(formatspec)) >= 10 ? "" : "\t";
+
+		fprintf(stderr, "\t--%s%s, -%c%s\t%s%s\n", op->name, formatspec, op->val, formatspec, addtab, op->help);
+	}
+}
