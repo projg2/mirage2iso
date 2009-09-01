@@ -157,7 +157,7 @@ int main(const int argc, char* const argv[]) {
 	union mirage_optarg_val val;
 	const char* newargv[argc];
 
-	while ((arg = mirage_getopt(argc, argv, opts, &val, newargv)) >= 0) {
+	while ((arg = mirage_getopt(argc, argv, opts, &val, newargv)) > 0) {
 		switch (arg) {
 			case 'c':
 				use_stdout = true;
