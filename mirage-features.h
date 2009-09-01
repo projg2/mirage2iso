@@ -1,7 +1,13 @@
-/* mirage2iso; support of NO_* defines and setting _*_SOURCE
+/* mirage2iso; support of NO_* defines and configure results
  * (c) 2009 Michał Górny
  * released under 3-clause BSD license
  */
+
+#ifdef USE_CONFIG
+#	include "mirage-config.h"
+#else
+#	warning "You should consider calling 'make configure' first"
+#endif
 
 #ifdef NO_POSIX
 #	define NO_MMAPIO
