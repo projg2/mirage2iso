@@ -5,7 +5,6 @@
 MIRAGE_CPPFLAGS = $$(pkg-config --cflags libmirage)
 MIRAGE_LDFLAGS = $$(pkg-config --libs-only-L --libs-only-other libmirage)
 MIRAGE_LIBS = $$(pkg-config --libs-only-l libmirage)
-CPPFLAGS = $$([ -f mirage-config.h ] && echo -DUSE_CONFIG)
 
 PROG = mirage2iso
 OBJS = mirage-getopt.o mirage-wrapper.o
@@ -13,6 +12,8 @@ OBJS = mirage-getopt.o mirage-wrapper.o
 CONFIGOUT = mirage-config.h
 CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o
 CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c
+
+CPPFLAGS = $$([ -f $(CONFIGOUT) ] && echo -DUSE_CONFIG=1)
 
 DESTDIR = 
 PREFIX = /usr/local
@@ -22,7 +23,6 @@ BINDIR = $(PREFIX)/bin
 .SUFFIXES: .o .c
 
 all: $(PROG)
-configure: $(CONFIGOUT)
 
 $(PROG): $(PROG).c $(OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(MIRAGE_LDFLAGS) -o $@ $< $(OBJS) $(MIRAGE_LIBS)
@@ -33,12 +33,15 @@ mirage-wrapper.o: mirage-wrapper.c
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-$(CONFIGOUT):
+configure:
 	make $(MAKEOPTS) -k CPPFLAGS='' $(CONFIGTESTS) || true
-	if [ -f check-getopt.o ]; then echo 'getopt_long() found.'; else echo 'getopt_long() unavailable.'; echo '#define NO_GETOPT_LONG 1' >> $@; fi
-	if [ -f check-sysexits.o ]; then echo '<sysexits.h> found.'; else echo '<sysexits.h> unavailable.'; echo '#define NO_SYSEXITS 1' >> $@; fi
-	if [ -f check-mmapio.o ]; then echo 'mmap() & ftruncate() found.'; else echo 'mmap() & ftruncate() unavailable.'; echo '#define NO_MMAPIO 1' >> $@; fi
-	touch $@
+	if [ -f check-getopt.o ]; then echo 'getopt_long() found.'; \
+		else echo 'getopt_long() unavailable.'; echo '#define NO_GETOPT_LONG 1' >> $(CONFIGOUT); fi
+	if [ -f check-sysexits.o ]; then echo '<sysexits.h> found.'; \
+		else echo '<sysexits.h> unavailable.'; echo '#define NO_SYSEXITS 1' >> $(CONFIGOUT); fi
+	if [ -f check-mmapio.o ]; then echo 'mmap() & ftruncate() found.'; \
+		else echo 'mmap() & ftruncate() unavailable.'; echo '#define NO_MMAPIO 1' >> $(CONFIGOUT); fi
+	touch $(CONFIGOUT)
 	rm -f $(CONFIGTESTS) $(CONFIGIN)
 
 check-getopt.c:
@@ -51,11 +54,14 @@ check-mmapio.c:
 	printf '#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>\nint main(void) { return (ftruncate(0, 0) || mmap(0, 0, 0, 0, 0, 0) == MAP_FAILED); }\n' > $@
 
 clean:
-	rm -f $(PROG) $(OBJS) $(CONFIGOUT)
+	rm -f $(PROG) $(OBJS)
+
+distclean: clean
+	rm -f $(CONFIGOUT)
 
 install: $(PROG)
 	umask a+rx; mkdir -p "$(DESTDIR)$(BINDIR)"
 	cp $(PROG) "$(DESTDIR)$(BINDIR)/"
 	chmod a+rx "$(DESTDIR)$(BINDIR)/$(PROG)"
 
-.PHONY: all clean configure install
+.PHONY: all clean configure distclean install
