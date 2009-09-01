@@ -18,6 +18,7 @@ DESTDIR =
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 
+.SILENT: $(CONFIGOUT) $(CONFIGIN)
 .SUFFIXES: .o .c
 
 all: $(PROG)
@@ -33,10 +34,10 @@ mirage-wrapper.o: mirage-wrapper.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 $(CONFIGOUT):
-	make $(MAKEOPTS) -k $(CONFIGTESTS) || true
-	[ -f check-getopt.o ] || echo '#define NO_GETOPT_LONG 1' >> $@
-	[ -f check-sysexits.o ] || echo '#define NO_SYSEXITS 1' >> $@
-	[ -f check-mmapio.o ] || echo '#define NO_MMAPIO 1' >> $@
+	make $(MAKEOPTS) -k CPPFLAGS='' $(CONFIGTESTS) || true
+	if [ -f check-getopt.o ]; then echo 'getopt_long() found.'; else echo 'getopt_long() unavailable.'; echo '#define NO_GETOPT_LONG 1' >> $@; fi
+	if [ -f check-sysexits.o ]; then echo '<sysexits.h> found.'; else echo '<sysexits.h> unavailable.'; echo '#define NO_SYSEXITS 1' >> $@; fi
+	if [ -f check-mmapio.o ]; then echo 'mmap() & ftruncate() found.'; else echo 'mmap() & ftruncate() unavailable.'; echo '#define NO_MMAPIO 1' >> $@; fi
 	touch $@
 	rm -f $(CONFIGTESTS) $(CONFIGIN)
 
