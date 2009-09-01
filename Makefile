@@ -44,10 +44,10 @@ check-getopt.c:
 	printf '#define _GNU_SOURCE 1\n#include <getopt.h>\nint main(int argc, char *argv[]) { getopt_long(argc, argv, "", 0, 0); return 0; }\n' > $@
 
 check-sysexits.c:
-	printf '#define _BSD_SOURCE 1\n#include <sysexits.h>\nint main(int argc, char *argv[]) { int test = EX_IOERR; return EX_OK; }\n' > $@
+	printf '#define _BSD_SOURCE 1\n#include <sysexits.h>\nint main(int argc, char *argv[]) { return EX_OK + EX_IOERR; }\n' > $@
 
 check-mmapio.c:
-	printf '#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>\nint main(void) { ftruncate(0, 0); mmap(0, 0, 0, 0, 0, 0); }\n' > $@
+	printf '#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>\nint main(void) { return (ftruncate(0, 0) || mmap(0, 0, 0, 0, 0, 0) == MAP_FAILED); }\n' > $@
 
 clean:
 	rm -f $(PROG) $(OBJS) $(CONFIGOUT)
