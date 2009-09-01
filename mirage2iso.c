@@ -3,7 +3,11 @@
  * released under 3-clause BSD license
  */
 
-#include "mirage-features.h"
+#ifdef USE_CONFIG
+#	include "mirage-config.h"
+#else
+#	include "mirage-features.h"
+#endif
 
 #ifndef NO_MMAPIO
 #	define _POSIX_C_SOURCE 200112L

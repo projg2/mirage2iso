@@ -10,37 +10,42 @@
 
 2. CONFIGURATION
 
-mirage2iso doesn't come with any configure script. Basically,
-Makefile directly gathers information about libmirage from pkg-config.
-
 If you don't have pkg-config or libmirage < 1.2 installed, expect
 standard compilation failure with some less or more readable output.
 
-By default, mirage2iso uses GNU & POSIX C extensions. You can disable
-them by either defining NO_GNU, NO_BSD or NO_POSIX (each next implies
-previous one). You can disable only specific features too using
-following defines:
-	-DNO_GETOPT_LONG (GNU)
+You can either let mirage2iso's Makefile shortly determine few
+capabilites of your system by calling:
+	$ make configure
+or directly provide correct defines as CPPFLAGS to make. You can use
+following defines to disable particular features:
+	-DNO_GETOPT_LONG (GNU extension)
 		disable use of getopt_long() in favor of internal parser
 	-DNO_SYSEXITS (BSD)
 		disable use of <sysexits.h> header in favor of hardcoded values
 	-DNO_MMAPIO (POSIX)
 		disable use of ftruncate() and mmap() to get mmaped I/O
 
+You can use -DNO_GNU, -DNO_BSD and -DNO_POSIX too, to disable all
+functions which require given standard. Note that disabling POSIX
+implies disabling BSD&GNU extensions too, and diabling BSD implies
+disabling GNU.
+
 
 3. COMPILATION
 
 It's all just plain make. It uses following variables either provided
 in command-line or gathered from environment:
-	CC, CFLAGS, CPPFLAGS, LDFLAGS
+	CC, CFLAGS, LDFLAGS
 
 If your environment is set right, you may compile it by calling:
 	$ make
 
-As CPPFLAGS mostly isn't rather defined globally, you should use it
-to define compile options, like:
+If you didn't use 'make configure', you should use CPPFLAGS to define
+compile options like:
 	$ make CPPFLAGS='-DNO_POSIX'
-to compile on non-POSIX systems.
+to compile on non-POSIX systems. Note that if you want to use
+'configure' results, you have to either leave CPPFLAGS undefined
+or specify '-DUSE_CONFIG' within.
 
 
 4. INSTALLATION

@@ -3,7 +3,12 @@
  * released under 3-clause BSD license
  */
 
-#include "mirage-features.h"
+#ifdef USE_CONFIG
+#	include "mirage-config.h"
+#else
+#	include "mirage-features.h"
+#endif
+
 #include "mirage-getopt.h"
 
 #ifndef NO_GETOPT_LONG
