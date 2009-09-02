@@ -19,7 +19,7 @@ DESTDIR =
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 
-.SILENT: $(CONFIGOUT) $(CONFIGIN)
+.SILENT: configure $(CONFIGIN)
 .SUFFIXES: .o .c
 
 all: $(PROG)
