@@ -3,6 +3,9 @@
  * released under 3-clause BSD license
  */
 
+#ifndef _MIRAGE_WRAPPER_H
+#define _MIRAGE_WRAPPER_H 1
+
 #include <stdbool.h>
 
 const bool miragewrap_init(void);
@@ -12,3 +15,5 @@ const int miragewrap_get_track_count(void);
 const size_t miragewrap_get_track_size(const int track_num);
 const bool miragewrap_output_track(void *out, const int track_num, const bool use_mmap);
 void miragewrap_free(void);
+
+#endif

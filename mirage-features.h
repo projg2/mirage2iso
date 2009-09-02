@@ -3,6 +3,9 @@
  * released under 3-clause BSD license
  */
 
+#ifndef _MIRAGE_FEATURES_H
+#define _MIRAGE_FEATURES_H 1
+
 #ifdef USE_CONFIG
 #	include "mirage-config.h"
 #else
@@ -21,4 +24,6 @@
 
 #ifdef NO_GNU
 #	define NO_GETOPT_LONG
+#endif
+
 #endif
