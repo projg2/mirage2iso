@@ -2,6 +2,7 @@
 
 
 == 0.2
+	* password input support,
 	* support for libmirage 1.2.
 
 == 0.1 / 3 Sep 2009
