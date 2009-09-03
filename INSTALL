@@ -13,22 +13,13 @@
 If you don't have pkg-config or libmirage < 1.2 installed, expect
 standard compilation failure with some less or more readable output.
 
-You can either let mirage2iso's Makefile shortly determine few
-capabilites of your system by calling:
-	$ make configure
-or directly provide correct defines as CPPFLAGS to make. You can use
-following defines to disable particular features:
-	-DNO_GETOPT_LONG (GNU extension)
-		disable use of getopt_long() in favor of internal parser
-	-DNO_SYSEXITS (BSD)
-		disable use of <sysexits.h> header in favor of hardcoded values
-	-DNO_MMAPIO (POSIX)
-		disable use of ftruncate() and mmap() to get mmaped I/O
+Use 'configure' script to determine system capabilities, configure
+the build and create the Makefile.
 
-You can use -DNO_GNU, -DNO_BSD and -DNO_POSIX too, to disable all
-functions which require given standard. Note that disabling POSIX
-implies disabling BSD&GNU extensions too, and diabling BSD implies
-disabling GNU.
+Note: this is not autotools configure script and it doesn't accept
+arguments like standard 'configure' scripts. If you want e.g. to change
+destination PREFIX, provide correct parameter to 'make install'
+as explained below.
 
 
 3. COMPILATION
@@ -39,13 +30,6 @@ in command-line or gathered from environment:
 
 If your environment is set right, you may compile it by calling:
 	$ make
-
-If you didn't use 'make configure', you should use CPPFLAGS to define
-compile options like:
-	$ make CPPFLAGS='-DNO_POSIX'
-to compile on non-POSIX systems. Note that if you want to use
-'configure' results, you have to either leave CPPFLAGS undefined
-or specify '-DUSE_CONFIG' within.
 
 
 4. INSTALLATION

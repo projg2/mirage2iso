@@ -1,0 +1,50 @@
+# mirage2iso
+# (c) 2009 Michał Górny
+# released under 3-clause BSD license
+
+PROG = mirage2iso
+OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
+
+CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o
+CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c
+
+DESTDIR = 
+PREFIX = /usr/local
+BINDIR = $(PREFIX)/bin
+
+.PHONY: all clean confclean configure distclean install
+.SILENT: confclean configure $(CONFIGIN)
+.SUFFIXES: .o .c
+
+all: $(PROG)
+
+$(PROG): $(PROG).c $(OBJS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(CONF_CPPFLAGS) $(LDFLAGS) $(CONF_LDFLAGS) -o $@ $< $(OBJS) $(LIBS) $(CONF_LIBS)
+
+.c.o:
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(CONF_CPPFLAGS) -c -o $@ $<
+
+configure: $(CONFIGTESTS)
+
+check-getopt.c:
+	printf '#define _GNU_SOURCE 1\n#include <getopt.h>\nint main(int argc, char *argv[]) { getopt_long(argc, argv, "", 0, 0); return 0; }\n' > $@
+
+check-sysexits.c:
+	printf '#define _BSD_SOURCE 1\n#include <sysexits.h>\nint main(int argc, char *argv[]) { return EX_OK + EX_IOERR; }\n' > $@
+
+check-mmapio.c:
+	printf '#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>\nint main(void) { return (ftruncate(0, 0) || mmap(0, 0, 0, 0, 0, 0) == MAP_FAILED); }\n' > $@
+
+confclean:
+	rm -f $(CONFIGTESTS) $(CONFIGIN)
+
+clean:
+	rm -f $(PROG) $(OBJS)
+
+distclean: clean confclean
+	rm -f Makefile mirage-config.h
+
+install: $(PROG)
+	umask a+rx; mkdir -p "$(DESTDIR)$(BINDIR)"
+	cp $(PROG) "$(DESTDIR)$(BINDIR)/"
+	chmod a+rx "$(DESTDIR)$(BINDIR)/$(PROG)"
