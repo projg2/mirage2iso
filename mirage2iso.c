@@ -48,7 +48,7 @@ bool verbose = false;
 static bool force_stdio = false;
 #endif
 
-static const char* const VERSION = "0.1";
+static const char* const VERSION = "0.2_pre";
 
 static const struct mirage_opt opts[] = {
 	{ "force", mirage_arg_none, 'f', "Force replacing guessed output file" },

@@ -1,0 +1,12 @@
+* mirage2iso NEWS *
+
+
+== 0.2
+	* support for libmirage 1.2.
+
+== 0.1 / 3 Sep 2009
+	* single data track conversion support,
+	* compatible with libmirage up to 1.1.1.
+
+
+* (c) 2009 Michał Górny, released under 3-clause BSD license *

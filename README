@@ -1,20 +1,10 @@
-* mirage2iso 0.1 *
+* mirage2iso 0.2 *
 
 
 == DESCRIPTION ==
 
 mirage2iso is a simple tool to convert various CD/DVD image formats into
 .iso images through use of libmirage (same one as used by cdemu).
-
-
-== COMPATIBILITY NOTE ==
-
-This version of mirage2iso was made against libmirage-1.1.1; it may
-not work well with older versions of the library and certainly won't
-compile with 1.2 or newer.
-
-Compatibility with older versions is not planned. Support for newer one
-will be added in near future.
 
 
 == LIMITATIONS ==

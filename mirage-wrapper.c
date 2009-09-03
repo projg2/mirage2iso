@@ -12,11 +12,14 @@
 #include <string.h>
 
 #include <mirage.h>
+#include "mirage-compat.h"
 
 extern bool quiet;
 extern bool verbose;
 
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
 static MIRAGE_Mirage *mirage = NULL;
+#endif
 static MIRAGE_Disc *disc = NULL;
 static MIRAGE_Session *session = NULL;
 static gint tracks;
@@ -35,6 +38,8 @@ static const bool miragewrap_err(const char* const format, ...) {
 
 	return false;
 }
+
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
 
 const bool miragewrap_init(void) {
 	g_type_init();
@@ -68,16 +73,39 @@ const char* const miragewrap_get_version(void) {
 	return buf;
 }
 
+#else
+
+const bool miragewrap_init(void) {
+	g_type_init();
+
+	if (!libmirage_init(&err))
+		return miragewrap_err("Unable to init libmirage");
+
+	return true;
+}
+
+const char* const miragewrap_get_version(void) {
+	return mirage_version_long;
+}
+
+#endif
+
 const bool miragewrap_open(const char* const fn, const int session_num) {
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!mirage) {
 		fprintf(stderr, "miragewrap_open() has to be called after miragewrap_init()\n");
 		return false;
 	}
+#endif /* XXX: add some check for new API */
 
 	gchar *_fn = g_strdup(fn);
 	gchar *filenames[] = { _fn, NULL };
 
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!mirage_mirage_create_disc(mirage, filenames, (GObject**) &disc, NULL, &err)) {
+#else
+	if (!((disc = (MIRAGE_Disc*) libmirage_create_disc(filenames, NULL, NULL, &err)))) {
+#endif
 		disc = NULL;
 		free(_fn);
 		return miragewrap_err("Unable to open input '%s'", fn);
@@ -287,5 +315,10 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 void miragewrap_free(void) {
 	if (session) g_object_unref(session);
 	if (disc) g_object_unref(disc);
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (mirage) g_object_unref(mirage);
+#else
+	if (!libmirage_shutdown(&err))
+		miragewrap_err("Library shutdown failed");
+#endif
 }
