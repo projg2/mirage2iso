@@ -7,7 +7,7 @@ MIRAGE_LDFLAGS = $$(pkg-config --libs-only-L --libs-only-other libmirage)
 MIRAGE_LIBS = $$(pkg-config --libs-only-l libmirage)
 
 PROG = mirage2iso
-OBJS = mirage-getopt.o mirage-wrapper.o
+OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
 
 CONFIGOUT = mirage-config.h
 CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o

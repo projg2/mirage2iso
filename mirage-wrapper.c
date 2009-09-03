@@ -13,6 +13,7 @@
 
 #include <mirage.h>
 #include "mirage-compat.h"
+#include "mirage-password.h"
 
 extern bool quiet;
 extern bool verbose;
@@ -39,15 +40,39 @@ static const bool miragewrap_err(const char* const format, ...) {
 	return false;
 }
 
-#ifdef MIRAGE_HAS_MIRAGE_OBJ
+#ifdef MIRAGE_HAS_PASSWORD_SUPPORT
+
+gchar* miragewrap_password_callback(gpointer user_data) {
+	const char* const pass = mirage_input_password();
+
+	if (!pass)
+		return NULL;
+
+	return g_strdup(pass);
+}
+
+#endif
 
 const bool miragewrap_init(void) {
 	g_type_init();
 
-	mirage = g_object_new(MIRAGE_TYPE_MIRAGE, NULL);
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
+	if (!((mirage = g_object_new(MIRAGE_TYPE_MIRAGE, NULL))))
+		return false;
+#else
+	if (!libmirage_init(&err))
+		return miragewrap_err("Unable to init libmirage");
+#endif
 
-	return !!mirage;
+#ifdef MIRAGE_HAS_PASSWORD_SUPPORT
+	if (!libmirage_set_password_function(miragewrap_password_callback, NULL, &err))
+		miragewrap_err("Unable to set password callback");
+#endif
+
+	return true;
 }
+
+#ifdef MIRAGE_HAS_MIRAGE_OBJ
 
 const char* const miragewrap_get_version(void) {
 	static char buf[10];
@@ -74,15 +99,6 @@ const char* const miragewrap_get_version(void) {
 }
 
 #else
-
-const bool miragewrap_init(void) {
-	g_type_init();
-
-	if (!libmirage_init(&err))
-		return miragewrap_err("Unable to init libmirage");
-
-	return true;
-}
 
 const char* const miragewrap_get_version(void) {
 	return mirage_version_long;
@@ -313,6 +329,10 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 }
 
 void miragewrap_free(void) {
+#ifdef MIRAGE_HAS_PASSWORD_SUPPORT
+	mirage_forget_password();
+#endif
+
 	if (session) g_object_unref(session);
 	if (disc) g_object_unref(disc);
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
