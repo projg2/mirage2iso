@@ -19,6 +19,16 @@ conf_results() {
 	conf_check check-assuan NO_ASSUAN 'assuan'
 }
 
+if ! pkg-config --exists libmirage; then
+	echo "Your pkg-config is unable to find libmirage." >&2
+	echo >&2
+	echo "To be able to build mirage2iso, you need to have both pkg-config" >&2
+	echo "and libmirage with development headers installed." >&2
+	exit 1
+else
+	echo 'libmirage found.'
+fi
+
 MAKEIN=Makefile.in
 
 # Both can fail
@@ -26,10 +36,16 @@ ASSUAN_CPPFLAGS="$(libassuan-config --cflags 2>/dev/null)"
 ASSUAN_LIBS="$(libassuan-config --libs 2>/dev/null)"
 ASSUAN_LIBS="${ASSUAN_LIBS:--lassuan}" # fallback
 
+echo >&2
+echo ">> calling 'make configure' to perform additional tests" >&2
+
 make ${MAKEFLAGS:-${MAKEOPTS}} -f ${MAKEIN} -k \
 	ASSUAN_CPPFLAGS="${ASSUAN_CPPFLAGS}" \
 	ASSUAN_LIBS="${ASSUAN_LIBS}" \
 	configure
+
+echo "<< 'make configure' done" >&2
+echo >&2
 
 if [ ! -f check-assuan ]; then
 	ASSUAN_CPPFLAGS=
@@ -48,6 +64,7 @@ CONF_LIBS = $(pkg-config --libs-only-l libmirage) ${ASSUAN_LIBS}
 
 _EOF_
 
-echo Done.
+echo >&2
+echo Done. >&2
 
 exit 0
