@@ -9,8 +9,6 @@ CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-termios.o che
 CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c check-termios.c check-assuan.c
 
 DESTDIR = 
-PREFIX = /usr/local
-BINDIR = $(PREFIX)/bin
 
 .PHONY: all clean confclean configure distclean install
 .SILENT: confclean configure $(CONFIGIN)
