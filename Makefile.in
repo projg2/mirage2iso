@@ -7,6 +7,7 @@ OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
 
 CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-termios.o $(ASSUAN_CHECK)
 CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c check-termios.c check-assuan.c
+CONFIGCLEANADD = check-assuan
 
 DESTDIR = 
 
@@ -43,7 +44,7 @@ check-assuan: check-assuan.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(ASSUAN_CPPFLAGS) $(LDFLAGS) -o $@ $< $(LIBS) $(ASSUAN_LIBS)
 
 confclean:
-	rm -f $(CONFIGTESTS) $(CONFIGIN)
+	rm -f $(CONFIGTESTS) $(CONFIGIN) $(CONFIGCLEANADD)
 
 clean:
 	rm -f $(PROG) $(OBJS)
