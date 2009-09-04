@@ -2,6 +2,7 @@
 
 
 == 0.2
+	* new 'configure' script similar to autotools one,
 	* password input support,
 	* support for libmirage 1.2.
 
