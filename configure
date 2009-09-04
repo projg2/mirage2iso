@@ -22,6 +22,24 @@ conf_results() {
 	conf_check "${ASSUAN_CHECK}" NO_ASSUAN 'assuan'
 }
 
+conf_help() {
+	cat <<_EOF_
+Synopsis:
+	./configure [options]
+
+Options:
+	--prefix=DIR		Prefix used to install arch-independent files
+				(\${PREFIX}, default: /usr/local)
+	--exec-prefix=DIR	Prefix used to install arch-dependent files
+				(\${EPREFIX}, default: \${PREFIX})
+	--bindir=DIR		Path to install user binaries
+				(\${BINDIR}, default: \${EPREFIX}/bin)
+
+	--without-assuan	Disable use of assuan
+
+_EOF_
+}
+
 # parse command-line arguments
 
 while [ $# -gt 0 ]; do
@@ -41,6 +59,9 @@ while [ $# -gt 0 ]; do
 		--without-assuan)
 			WITH_ASSUAN=0
 			;;
+		--help)
+			conf_help
+			exit 1
 	esac
 
 	shift
