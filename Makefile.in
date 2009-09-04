@@ -5,7 +5,7 @@
 PROG = mirage2iso
 OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
 
-CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-termios.o check-assuan
+CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-termios.o $(ASSUAN_CHECK)
 CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c check-termios.c check-assuan.c
 
 DESTDIR = 

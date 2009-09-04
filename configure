@@ -4,7 +4,9 @@
 # released under 3-clause BSD license
 
 conf_check() {
-	if [ -f "$1" ]; then
+	if [ -z "$1" ]; then
+		echo "$3 explicitly disabled." >&2
+	elif [ -f "$1" ]; then
 		echo "$3 found." >&2
 	else
 		echo "#define $2 1"
@@ -17,7 +19,7 @@ conf_results() {
 	conf_check check-sysexits.o NO_SYSEXITS '<sysexits.h>'
 	conf_check check-mmapio.o NO_MMAPIO 'mmap() & ftruncate()'
 	conf_check check-termios.o NO_TERMIOS 'termios'
-	conf_check check-assuan NO_ASSUAN 'assuan'
+	conf_check "${ASSUAN_CHECK}" NO_ASSUAN 'assuan'
 }
 
 # parse command-line arguments
@@ -33,6 +35,12 @@ while [ $# -gt 0 ]; do
 		--bindir=*)
 			BINDIR=${1#--bindir=}
 			;;
+		--with-assuan)
+			WITH_ASSUAN=1
+			;;
+		--without-assuan)
+			WITH_ASSUAN=0
+			;;
 	esac
 
 	shift
@@ -41,6 +49,8 @@ done
 : ${PREFIX=/usr/local}
 : ${EPREFIX=${PREFIX}}
 : ${BINDIR=${EPREFIX}/bin}
+
+: ${WITH_ASSUAN:=1}
 
 if ! pkg-config --exists libmirage; then
 	echo "Your pkg-config is unable to find libmirage." >&2
@@ -54,10 +64,14 @@ fi
 
 MAKEIN=Makefile.in
 
-# Both can fail
-ASSUAN_CPPFLAGS=$(libassuan-config --cflags 2>/dev/null)
-ASSUAN_LIBS=$(libassuan-config --libs 2>/dev/null)
-: ${ASSUAN_LIBS:=-lassuan} # fallback
+if [ ${WITH_ASSUAN} -eq 1 ]; then
+	# Both can fail
+	ASSUAN_CPPFLAGS=$(libassuan-config --cflags 2>/dev/null)
+	ASSUAN_LIBS=$(libassuan-config --libs 2>/dev/null)
+	: ${ASSUAN_LIBS:=-lassuan} # fallback
+
+	ASSUAN_CHECK=check-assuan
+fi
 
 echo >&2
 echo ">> calling 'make configure' to perform additional tests" >&2
@@ -65,12 +79,13 @@ echo ">> calling 'make configure' to perform additional tests" >&2
 make ${MAKEFLAGS:-${MAKEOPTS}} -f ${MAKEIN} -k \
 	ASSUAN_CPPFLAGS="${ASSUAN_CPPFLAGS}" \
 	ASSUAN_LIBS="${ASSUAN_LIBS}" \
+	ASSUAN_CHECK="${ASSUAN_CHECK}" \
 	configure
 
 echo "<< 'make configure' done" >&2
 echo >&2
 
-if [ ! -f check-assuan ]; then
+if [ -z "${ASSUAN_CHECK}" -o ! -f "${ASSUAN_CHECK}" ]; then
 	ASSUAN_CPPFLAGS=
 	ASSUAN_LIBS=
 fi
