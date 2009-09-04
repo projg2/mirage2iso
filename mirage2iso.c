@@ -72,62 +72,84 @@ static void version(const bool mirage) {
 	fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
 }
 
+#ifndef NO_MMAPIO
+static const int mmapio_open(const char* const fn, const size_t size, FILE** const f, void** const out) {
+	*f = fopen(fn, "a+b");
+	if (!*f) {
+		perror("Unable to open output file");
+		return EX_CANTCREAT;
+	}
+
+	const int fd = fileno(*f);
+
+	if (ftruncate(fd, size) == -1) {
+		perror("ftruncate() failed");
+
+		if (errno == EPERM || errno == EINVAL)
+			return EX_OK; /* we can't expand the file, so will try stdio */
+		else
+			return EX_IOERR;
+	}
+
+	void* const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+	if (buf == MAP_FAILED)
+		perror("mmap() failed");
+	else
+		*out = buf;
+
+	return EX_OK;
+}
+#endif
+
+static const int stdio_open(const char* const fn, FILE** const f) {
+	if (*f)
+		*f = freopen(fn, "wb", *f);
+	else
+		*f = fopen(fn, "wb");
+
+	if (!*f) {
+		perror("Unable to open output file");
+		return EX_CANTCREAT;
+	}
+
+	return EX_OK;
+}
+
 static const int output_track(const char* const fn, const int track_num) {
 	const bool use_stdout = !fn;
-#ifndef NO_MMAPIO
-	bool use_mmap = !force_stdio;
-#else
-	bool use_mmap = false;
-#endif
 
 	size_t size = miragewrap_get_track_size(track_num);
 	if (size == 0)
 		return EX_DATAERR;
 
-	FILE *f = use_stdout ? stdout : fopen(fn, use_mmap ? "a+b" : "wb");
-	if (!f) {
-		perror("Unable to open output file");
-		return EX_CANTCREAT;
-	}
-	if (verbose)
-		fprintf(stderr, "Output file '%s' open for track %d\n", use_stdout ? "(stdout)" : fn, track_num);
+	FILE *f = NULL;
+	void *out = NULL;
+	int ret;
 
-	void *buf = NULL;
+	if (use_stdout) {
+		f = stdout;
 
+		if (verbose)
+			fprintf(stderr, "Using standard output stream for track %d\n", track_num);
+	} else {
 #ifndef NO_MMAPIO
-	if (use_mmap) {
-		if (ftruncate(fileno(f), size) == -1) {
-			perror("ftruncate() failed");
-
-			if (errno == EPERM || errno == EINVAL)
-				use_mmap = false; /* we can't expand the file, so will use standard I/O */
-			else {
-				if (fclose(f))
-					perror("fclose() failed");
-				return EX_IOERR;
-			}
+		if (!force_stdio && ((ret = mmapio_open(fn, size, &f, &out))) != EX_OK) {
+			if (f && fclose(f))
+				perror("fclose() failed");
+			return ret;
 		}
-	}
-
-	if (use_mmap) {
-		buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fileno(f), 0);
-		if (buf == MAP_FAILED) {
-			use_mmap = false;
-			perror("mmap() failed (trying mmap-free I/O)");
-		}
-	}
-
-	if (!use_mmap && !force_stdio) { /* we tried and we failed */
-		if (!(f = freopen(fn, "w", f))) {
-			perror("Unable to reopen output file");
-			return EX_CANTCREAT;
-		}
-	}
 #endif
 
-	if (!miragewrap_output_track(use_mmap ? buf : f, track_num, use_mmap)) {
+		if (!out && ((ret = stdio_open(fn, &f))) != EX_OK)
+			return ret;
+
+		if (verbose)
+			fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
+	}
+
+	if (!miragewrap_output_track(out, track_num, f)) {
 #ifndef NO_MMAPIO
-		if (munmap(buf, size))
+		if (out && munmap(out, size))
 			perror("munmap() failed");
 #endif
 		if (!use_stdout && fclose(f))
@@ -136,7 +158,7 @@ static const int output_track(const char* const fn, const int track_num) {
 	}
 
 #ifndef NO_MMAPIO
-	if (munmap(buf, size))
+	if (out && munmap(out, size))
 		perror("munmap() failed");
 #endif
 

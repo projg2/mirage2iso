@@ -255,7 +255,9 @@ const size_t miragewrap_get_track_size(const int track_num) {
 	return expssize * (len-sstart);
 }
 
-const bool miragewrap_output_track(void *out, const int track_num, const bool use_mmap) {
+const bool miragewrap_output_track(void* const out, const int track_num, FILE* const f) {
+	const bool use_mmap = !!out;
+
 	if (!session) {
 		fprintf(stderr, "miragewrap_output_track() has to be called after miragewrap_open()\n");
 		return 0;
@@ -271,12 +273,8 @@ const bool miragewrap_output_track(void *out, const int track_num, const bool us
 	gint i, olen;
 	const int vlen = quiet ? 0 : snprintf(NULL, 0, "%d", len); /* printf() accepts <= 0 */
 
-	FILE *f;
 	guint8 *buf;
 	if (!use_mmap) {
-		/* if not using mmap, out is FILE*
-		 * and we need to alloc ourselves a buffer */
-		f = out;
 		buf = malloc(bufsize);
 
 		if (!buf) {
