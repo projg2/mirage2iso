@@ -5,6 +5,7 @@
 
 conf_check() {
 	if [ -z "$1" ]; then
+		echo "#define $2 1"
 		echo "$3 explicitly disabled." >&2
 	elif [ -f "$1" ]; then
 		echo "$3 found." >&2
