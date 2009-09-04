@@ -5,12 +5,21 @@
 
 #include "mirage-config.h"
 
-#define _ISOC99_SOURCE 1
+#ifndef NO_TERMIOS
+#	define _POSIX_C_SOURCE 200112L
+#else
+#	define _ISOC99_SOURCE 1
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+
+#ifndef NO_TERMIOS
+#	include <termios.h>
+#	include <unistd.h>
+#endif
 
 #ifndef NO_ASSUAN
 #	include <stddef.h>
@@ -156,6 +165,33 @@ static const mirage_tristate_t mirage_input_password_pinentry(void) {
 
 #endif
 
+static const bool mirage_echo(const bool newstate) {
+#ifndef NO_TERMIOS
+	const int fd = fileno(stdin);
+	struct termios term;
+
+	/* noecho state should have eaten a newline */
+	if (newstate)
+		fprintf(stderr, "\n");
+
+	if (tcgetattr(fd, &term) == -1)
+		perror("tcgetattr() failed");
+	else {
+		if (newstate)
+			term.c_lflag |= ECHO;
+		else
+			term.c_lflag &= !ECHO;
+
+		if (tcsetattr(fd, TCSANOW, &term) == -1)
+			perror("tcsetattr() failed");
+		else
+			return true;
+	}
+#endif
+
+	return false;
+}
+
 static const mirage_tristate_t mirage_input_password_stdio(void) {
 	if (!buf) {
 		buf = malloc(password_bufsize);
@@ -164,13 +200,20 @@ static const mirage_tristate_t mirage_input_password_stdio(void) {
 			return error;
 		}
 
+		/* disable the echo before the prompt as we may output error */
+		const bool echooff = mirage_echo(false);
+
 		fprintf(stderr, "Please input password to the encrypted image: ");
 
 		if (!fgets(buf, password_bufsize, stdin)) {
 			fprintf(stderr, "Password input failed\n");
 			mirage_forget_password();
+			if (echooff)
+				mirage_echo(true);
 			return error;
 		}
+		if (echooff)
+			mirage_echo(true);
 
 		/* remove trailing newline */
 		const int len = strlen(buf);

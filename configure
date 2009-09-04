@@ -16,6 +16,7 @@ conf_results() {
 	conf_check check-getopt.o NO_GETOPT_LONG 'getopt_long()'
 	conf_check check-sysexits.o NO_SYSEXITS '<sysexits.h>'
 	conf_check check-mmapio.o NO_MMAPIO 'mmap() & ftruncate()'
+	conf_check check-termios.o NO_TERMIOS 'termios'
 	conf_check check-assuan NO_ASSUAN 'assuan'
 }
 

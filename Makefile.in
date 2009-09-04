@@ -5,8 +5,8 @@
 PROG = mirage2iso
 OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
 
-CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-assuan
-CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c check-assuan.c
+CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-termios.o check-assuan
+CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c check-termios.c check-assuan.c
 
 DESTDIR = 
 PREFIX = /usr/local
@@ -34,6 +34,9 @@ check-sysexits.c:
 
 check-mmapio.c:
 	printf '#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>\nint main(void) { return (ftruncate(0, 0) || mmap(0, 0, 0, 0, 0, 0) == MAP_FAILED); }\n' > $@
+
+check-termios.c:
+	printf '#define _POSIX_C_SOURCE 200112L\n#include <stdio.h>\n#include <termios.h>\n#include <unistd.h>\nint main(void) { struct termios term; return tcgetattr(fileno(stdin), &term); }\n' > $@
 
 check-assuan.c:
 	printf '#define _ISO_C99_SOURCE 1\n#include <assuan.h>\nint main(void) { assuan_context_t ctx; return assuan_pipe_connect(&ctx, "/bin/true", 0, 0); }\n' > $@
