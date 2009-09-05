@@ -201,49 +201,50 @@ static const bool mirage_echo(const bool newstate) {
 }
 
 static const mirage_tristate_t mirage_input_password_stdio(void) {
-	if (!buf) {
-		if (!mirage_allocbuf(0))
-			return error;
+	if (!mirage_allocbuf(0))
+		return error;
 
-		/* disable the echo before the prompt as we may output error */
-		const bool echooff = mirage_echo(false);
+	/* disable the echo before the prompt as we may output error */
+	const bool echooff = mirage_echo(false);
 
-		fprintf(stderr, "Please input password to the encrypted image: ");
+	fprintf(stderr, "Please input password to the encrypted image: ");
 
-		if (!fgets(buf, password_bufsize, stdin)) {
-			fprintf(stderr, "Password input failed\n");
-			mirage_forget_password();
-			if (echooff)
-				mirage_echo(true);
-			return error;
-		}
+	if (!fgets(buf, password_bufsize, stdin)) {
+		fprintf(stderr, "Password input failed\n");
+		mirage_forget_password();
 		if (echooff)
 			mirage_echo(true);
+		return error;
+	}
+	if (echooff)
+		mirage_echo(true);
 
-		/* remove trailing newline */
-		const int len = strlen(buf);
-		char *last = &buf[len - 1];
-		char *plast = &buf[len - 2];
+	/* remove trailing newline */
+	const int len = strlen(buf);
+	char *last = &buf[len - 1];
+	char *plast = &buf[len - 2];
 
-		/* support single LF, single CR, CR/LF, LF/CR */
-		if (len >= 1 && (*last == '\n' || *last == '\r')) {
-			if (len >= 2 && *plast != *last && (*plast == '\r' || *plast == '\n'))
-				*plast = 0;
-			*last = 0;
-		}
+	/* support single LF, single CR, CR/LF, LF/CR */
+	if (len >= 1 && (*last == '\n' || *last == '\r')) {
+		if (len >= 2 && *plast != *last && (*plast == '\r' || *plast == '\n'))
+			*plast = 0;
+		*last = 0;
+	}
 
-		/* buf got wiped? */
-		if (!*buf) {
-			fprintf(stderr, "No password supplied\n");
-			mirage_forget_password();
-			return failure;
-		}
+	/* buf got wiped? */
+	if (!*buf) {
+		fprintf(stderr, "No password supplied\n");
+		mirage_forget_password();
+		return failure;
 	}
 
 	return success;
 }
 
 const char* const mirage_input_password(void) {
+	if (buf) /* password already there */
+		return buf;
+
 #ifndef NO_ASSUAN
 	switch (mirage_input_password_pinentry()) {
 		case error: break;
