@@ -262,3 +262,14 @@ const char* const mirage_input_password(void) {
 	fprintf(stderr, "All supported methods of password input have failed\n");
 	return NULL;
 }
+
+bool mirage_set_password(const char* const pass) {
+	mirage_forget_password();
+
+	if (!mirage_allocbuf(strlen(pass) + 1))
+		return false;
+
+	strcpy(buf, pass);
+
+	return true;
+}

@@ -53,6 +53,7 @@ static const char* const VERSION = "0.2_pre";
 static const struct mirage_opt opts[] = {
 	{ "force", mirage_arg_none, 'f', "Force replacing guessed output file" },
 	{ "help", mirage_arg_none, '?', "Take a wild guess" },
+	{ "password", mirage_arg_str, 'p', "Password for the encrypted image" },
 	{ "quiet", mirage_arg_none, 'q', "Disable progress reporting, output only errors" },
 	{ "session", mirage_arg_int, 's', "Session to use (default: last one)" },
 	{ "stdio", mirage_arg_none, 'S', "Force using stdio instead of mmap()" },
@@ -186,6 +187,9 @@ int main(const int argc, char* const argv[]) {
 				break;
 			case 'f':
 				force = true;
+				break;
+			case 'p':
+				mirage_set_password(val.as_str);
 				break;
 			case 'q':
 				quiet = true;
