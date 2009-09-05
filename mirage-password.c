@@ -52,6 +52,16 @@ void mirage_forget_password(void) {
 	}
 }
 
+static bool mirage_allocbuf(const int size) {
+	buf = malloc(size ? size : password_bufsize);
+	if (!buf) {
+		fprintf(stderr, "malloc() for password buffer failed\n");
+		return false;
+	}
+
+	return true;
+}
+
 #ifndef NO_ASSUAN
 
 /* XXX: more portable solution? */
@@ -133,9 +143,7 @@ static const mirage_tristate_t mirage_input_password_pinentry(void) {
 		return failure;
 	}
 
-	buf = malloc(rcvlen - 1); /* two less for 'D ', one more for \0 */
-	if (!buf) {
-		fprintf(stderr, "malloc() for password buffer failed\n");
+	if (!mirage_allocbuf(rcvlen - 1)) {
 		assuan_disconnect(ctx);
 		return error;
 	}
@@ -194,11 +202,8 @@ static const bool mirage_echo(const bool newstate) {
 
 static const mirage_tristate_t mirage_input_password_stdio(void) {
 	if (!buf) {
-		buf = malloc(password_bufsize);
-		if (!buf) {
-			fprintf(stderr, "malloc() for password buffer failed\n");
+		if (!mirage_allocbuf(0))
 			return error;
-		}
 
 		/* disable the echo before the prompt as we may output error */
 		const bool echooff = mirage_echo(false);
