@@ -14,12 +14,11 @@ If you don't have pkg-config or libmirage < 1.2 installed, expect
 standard compilation failure with some less or more readable output.
 
 Use 'configure' script to determine system capabilities, configure
-the build and create the Makefile.
+the build and create the Makefile:
+	$ ./configure
 
-Note: this is not autotools configure script and it doesn't accept
-arguments like standard 'configure' scripts. If you want e.g. to change
-destination PREFIX, provide correct parameter to 'make install'
-as explained below.
+To get list of options that configure accepts, use:
+	$ ./configure --help
 
 
 3. COMPILATION
@@ -28,26 +27,23 @@ It's all just plain make. It uses following variables either provided
 in command-line or gathered from environment:
 	CC, CFLAGS, LDFLAGS
 
-If your environment is set right, you may compile it by calling:
+If your environment is set right, you can compile m2i by calling:
 	$ make
 
 
 4. INSTALLATION
 
-The Makefile provides 'install' target with following variables
-for fine-tuning installation location:
-	DESTDIR, PREFIX, BINDIR
+The Makefile provides an 'install' target which installs the binary
+in the appropriate directory. By default, that is '/usr/local'; you may
+fine-tune the install prefix using '--prefix' option to configure
+script. You can also install m2i into fake root using DESTDIR macro.
 
-mirage2iso doesn't internally depend on any of these paths (it is 100%
-location-independent) you may set them to anything. But the preferred
-solution is to use PREFIX as system-wide install prefix (like '/usr')
-and DESTDIR for fake root installs.
-
-To install mirage2iso into /usr/local tree just call:
+To simply install:
 	# make install
-But when creating packages you should probably instead use:
-	# make PREFIX=/usr DESTDIR="${D}" install
-where "${D}" is the fake root dir.
+
+If you're going to create a package you would probably use:
+	# make DESTDIR="${D}" install
+instead, where "${D}" is the fake root dir.
 
 
 * (c) 2009 Michał Górny, released under 3-clause BSD license *
