@@ -7,6 +7,31 @@ mirage2iso is a simple tool to convert various CD/DVD image formats into
 .iso images through use of libmirage (same one as used by cdemu).
 
 
+== SOURCE FILE REMOVAL/REPLACEMENT ==
+
+Note that mirage2iso doesn't support 'non-keep' mode, i.e. is always
+meant to create output file without touching input one.
+
+Please note that it doesn't check whether user hasn't specified same
+file for both input and output nor that output matches one of input file
+(in case of multi-file images), thus if you call it like that it may
+destroy your precious data.
+
+I don't plan introducing 'non-keep' mode in the near future. There are
+few reasons for that:
+
+1) I can't guarantee that mirage2iso will create the correct output
+   image and even if it will, it does convert single track of single
+   session only;
+2) I think most of users will use mirage2iso to convert images
+   downloaded through P2P, and there removing original file would break
+   the basic assumptions of P2P;
+3) mirage2iso doesn't operate on input file(s) itself, libmirage does it
+   instead. Thus, m2i knows as much as user provides it and in most
+   cases that's not enough to remove whole source distribution. And
+   what's sense of removing .cue file and leaving .bin file untouched?
+
+
 == LIMITATIONS ==
 
 Current version of mirage2iso doesn't support multi-track images. If
