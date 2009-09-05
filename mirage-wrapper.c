@@ -321,6 +321,8 @@ bool miragewrap_output_track(void* const out, const int track_num, FILE* const f
 	}
 	if (!quiet)
 		fprintf(stderr, "\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
+	if (!use_mmap)
+		free(buf);
 
 	g_object_unref(track);
 	return true;
