@@ -63,7 +63,7 @@ static const struct mirage_opt opts[] = {
 	{ 0, 0, 0, 0 }
 };
 
-static const int help(const char* argv0) {
+static int help(const char* argv0) {
 	mirage_getopt_help(*argv0 ? argv0 : "mirage2iso", "[options] <infile> [outfile.iso]", opts);
 	return EX_USAGE;
 }
@@ -74,7 +74,7 @@ static void version(const bool mirage) {
 }
 
 #ifndef NO_MMAPIO
-static const int mmapio_open(const char* const fn, const size_t size, FILE** const f, void** const out) {
+static int mmapio_open(const char* const fn, const size_t size, FILE** const f, void** const out) {
 	*f = fopen(fn, "a+b");
 	if (!*f) {
 		perror("Unable to open output file");
@@ -102,7 +102,7 @@ static const int mmapio_open(const char* const fn, const size_t size, FILE** con
 }
 #endif
 
-static const int stdio_open(const char* const fn, FILE** const f) {
+static int stdio_open(const char* const fn, FILE** const f) {
 	if (*f)
 		*f = freopen(fn, "wb", *f);
 	else
@@ -116,7 +116,7 @@ static const int stdio_open(const char* const fn, FILE** const f) {
 	return EX_OK;
 }
 
-static const int output_track(const char* const fn, const int track_num) {
+static int output_track(const char* const fn, const int track_num) {
 	const bool use_stdout = !fn;
 
 	size_t size = miragewrap_get_track_size(track_num);

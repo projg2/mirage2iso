@@ -65,7 +65,7 @@ static bool mirage_allocbuf(const int size) {
 #ifndef NO_ASSUAN
 
 /* XXX: more portable solution? */
-static const char* const mirage_getshell(void) {
+static const char* mirage_getshell(void) {
 	const char* const shvar = getenv("SHELL");
 
 	if (shvar && *shvar)
@@ -74,7 +74,7 @@ static const char* const mirage_getshell(void) {
 	return "/bin/sh";
 }
 
-static const mirage_tristate_t mirage_pinentry_set(assuan_context_t ctx, const char* const cmd) {
+static mirage_tristate_t mirage_pinentry_set(assuan_context_t ctx, const char* const cmd) {
 	assuan_error_t err;
 	char *rcvbuf;
 	size_t rcvlen;
@@ -98,7 +98,7 @@ static const mirage_tristate_t mirage_pinentry_set(assuan_context_t ctx, const c
 	return success;
 }
 
-static const mirage_tristate_t mirage_input_password_pinentry(void) {
+static mirage_tristate_t mirage_input_password_pinentry(void) {
 	const char* const shell = mirage_getshell();
 	const char* const args[] = { shell, "-c", "exec pinentry", NULL };
 	int noclose[] = { -1 };
@@ -173,7 +173,7 @@ static const mirage_tristate_t mirage_input_password_pinentry(void) {
 
 #endif
 
-static const bool mirage_echo(const bool newstate) {
+static bool mirage_echo(const bool newstate) {
 #ifndef NO_TERMIOS
 	const int fd = fileno(stdin);
 	struct termios term;
@@ -200,7 +200,7 @@ static const bool mirage_echo(const bool newstate) {
 	return false;
 }
 
-static const mirage_tristate_t mirage_input_password_stdio(void) {
+static mirage_tristate_t mirage_input_password_stdio(void) {
 	if (!mirage_allocbuf(0))
 		return error;
 
@@ -241,7 +241,7 @@ static const mirage_tristate_t mirage_input_password_stdio(void) {
 	return success;
 }
 
-const char* const mirage_input_password(void) {
+const char* mirage_input_password(void) {
 	if (buf) /* password already there */
 		return buf;
 

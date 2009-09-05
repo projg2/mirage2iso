@@ -27,7 +27,7 @@ static gint tracks;
 
 static GError *err = NULL;
 
-static const bool miragewrap_err(const char* const format, ...) {
+static bool miragewrap_err(const char* const format, ...) {
 	va_list ap;
 
 	va_start(ap, format);
@@ -53,7 +53,7 @@ gchar* miragewrap_password_callback(gpointer user_data) {
 
 #endif
 
-const bool miragewrap_init(void) {
+bool miragewrap_init(void) {
 	g_type_init();
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
@@ -74,7 +74,7 @@ const bool miragewrap_init(void) {
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 
-const char* const miragewrap_get_version(void) {
+const char* miragewrap_get_version(void) {
 	static char buf[10];
 	gchar *tmp;
 
@@ -100,13 +100,13 @@ const char* const miragewrap_get_version(void) {
 
 #else
 
-const char* const miragewrap_get_version(void) {
+const char* miragewrap_get_version(void) {
 	return mirage_version_long;
 }
 
 #endif
 
-const bool miragewrap_open(const char* const fn, const int session_num) {
+bool miragewrap_open(const char* const fn, const int session_num) {
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!mirage) {
 		fprintf(stderr, "miragewrap_open() has to be called after miragewrap_init()\n");
@@ -153,7 +153,7 @@ const bool miragewrap_open(const char* const fn, const int session_num) {
 	return true;
 }
 
-const int miragewrap_get_track_count(void) {
+int miragewrap_get_track_count(void) {
 	if (!session) {
 		fprintf(stderr, "miragewrap_get_track_count() has to be called after miragewrap_open()\n");
 		return 0;
@@ -237,7 +237,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 	return track;
 }
 
-const size_t miragewrap_get_track_size(const int track_num) {
+size_t miragewrap_get_track_size(const int track_num) {
 	if (!session) {
 		fprintf(stderr, "miragewrap_get_track_size() has to be called after miragewrap_open()\n");
 		return 0;
@@ -255,7 +255,7 @@ const size_t miragewrap_get_track_size(const int track_num) {
 	return expssize * (len-sstart);
 }
 
-const bool miragewrap_output_track(void* const out, const int track_num, FILE* const f) {
+bool miragewrap_output_track(void* const out, const int track_num, FILE* const f) {
 	const bool use_mmap = !!out;
 
 	if (!session) {

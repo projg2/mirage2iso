@@ -24,7 +24,7 @@ struct mirage_opt {
 	const char* const help;
 };
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]);
+short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]);
 void mirage_getopt_help(const char* const argv0, const char* const synopsis, const struct mirage_opt* const opts);
 
 #endif

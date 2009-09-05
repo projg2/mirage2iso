@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-static const bool try_atoi(const char* const val, int* const out) {
+static bool try_atoi(const char* const val, int* const out) {
 	char *end;
 	int tmp;
 
@@ -35,7 +35,7 @@ static const bool try_atoi(const char* const val, int* const out) {
 
 #ifndef NO_GETOPT_LONG
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
+short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
 	const struct mirage_opt *op;
 	int arrlen = 1, buflen = 1;
 
@@ -101,7 +101,7 @@ const short int mirage_getopt(const int argc, char* const argv[], const struct m
 
 #else
 
-const short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
+short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
 	static int argindex = 1;
 	static const char* shortptr = NULL;
 	static int newargc = 0;
