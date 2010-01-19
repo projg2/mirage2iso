@@ -23,6 +23,9 @@
 
 #ifndef NO_ASSUAN
 #	include <stddef.h>
+#	ifndef NO_ASSUAN2
+#		include <gpg-error.h>
+#	endif
 #	include <assuan.h>
 #endif
 
@@ -74,6 +77,25 @@ static const char* mirage_getshell(void) {
 	return "/bin/sh";
 }
 
+#ifndef NO_ASSUAN2
+/* this should be less risky than redefining gpg_* for assuan1 */
+
+typedef gpg_error_t assuan_error_t;
+const assuan_error_t ASSUAN_No_Error = GPG_ERR_NO_ERROR;
+
+inline const char* assuan_strerror(assuan_error_t err) {
+	return gpg_strerror(err);
+}
+
+#else
+
+inline assuan_error_t assuan_release(const assuan_context_t ctx) {
+	assuan_disconnect(ctx);
+	return 0;
+}
+
+#endif
+
 static mirage_tristate_t mirage_pinentry_set(assuan_context_t ctx, const char* const cmd) {
 	assuan_error_t err;
 	char *rcvbuf;
@@ -100,13 +122,22 @@ static mirage_tristate_t mirage_pinentry_set(assuan_context_t ctx, const char* c
 
 static mirage_tristate_t mirage_input_password_pinentry(void) {
 	const char* const shell = mirage_getshell();
-	const char* const args[] = { shell, "-c", "exec pinentry", NULL };
+	const char* args[] = { shell, "-c", "exec pinentry", NULL };
 	int noclose[] = { -1 };
 
 	assuan_context_t ctx;
 	assuan_error_t err;
 
+#ifndef NO_ASSUAN2
+	if (((err = assuan_new(&ctx))) != GPG_ERR_NO_ERROR) {
+		fprintf(stderr, "Failed to initialize libassuan: %s\n", assuan_strerror(err));
+		return error;
+	}
+
+	if (((err = assuan_pipe_connect(ctx, shell, args, noclose, NULL, NULL, 0))) != GPG_ERR_NO_ERROR) {
+#else
 	if (((err = assuan_pipe_connect(&ctx, shell, args, noclose))) != ASSUAN_No_Error) {
+#endif
 		fprintf(stderr, "Failed to launch pinentry: %s\n", assuan_strerror(err));
 		return error;
 	}
@@ -115,7 +146,7 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 			|| !mirage_pinentry_set(ctx, "SETPROMPT Pass:")
 			|| !mirage_pinentry_set(ctx, "SETTITLE mirage2iso")) {
 
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return error;
 	}
 
@@ -126,25 +157,25 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 
 	if (((err = assuan_write_line(ctx, "GETPIN"))) != ASSUAN_No_Error) {
 		fprintf(stderr, "Failed to send the password request to pinentry: %s\n", assuan_strerror(err));
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return error;
 	}
 
 	/* we get either 'D <password>' here or 'ERR nnnnn desc' */
 	if (((err = assuan_read_line(ctx, &rcvbuf, &rcvlen))) != ASSUAN_No_Error) {
 		fprintf(stderr, "Failed to receive the password response from pinentry: %s\n", assuan_strerror(err));
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return error;
 	}
 
 	if (rcvlen <= 2 || strncmp(rcvbuf, "D ", 2)) {
 		fprintf(stderr, "No password supplied\n");
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return failure;
 	}
 
 	if (!mirage_allocbuf(rcvlen - 1)) {
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return error;
 	}
 	strncpy(buf, &rcvbuf[2], rcvlen - 2);
@@ -154,19 +185,19 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 	if (((err = assuan_read_line(ctx, &rcvbuf, &rcvlen))) != ASSUAN_No_Error) {
 		fprintf(stderr, "Failed to receive a confirmation from pinentry: %s\n", assuan_strerror(err));
 		mirage_forget_password();
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return error;
 	}
 
 	if (rcvlen != 2 || strncmp(rcvbuf, "OK", 2)) {
 		fprintf(stderr, "pinentry didn't confirm sent password\n");
 		mirage_forget_password();
-		assuan_disconnect(ctx);
+		assuan_release(ctx);
 		return error;
 	}
 
 	assuan_end_confidential(ctx);
-	assuan_disconnect(ctx);
+	assuan_release(ctx);
 
 	return success;
 }

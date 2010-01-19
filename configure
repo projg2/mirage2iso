@@ -20,7 +20,10 @@ conf_results() {
 	conf_check check-sysexits.o NO_SYSEXITS '<sysexits.h>'
 	conf_check check-mmapio.o NO_MMAPIO 'mmap() & ftruncate()'
 	conf_check check-termios.o NO_TERMIOS 'termios'
-	conf_check "${ASSUAN_CHECK}" NO_ASSUAN 'assuan'
+	conf_check "${ASSUAN2_CHECK}" NO_ASSUAN2 'assuan-2'
+	if [ -n "${ASSUAN2_CHECK}" -a ! -f "${ASSUAN2_CHECK}" ]; then
+		conf_check "${ASSUAN_CHECK}" NO_ASSUAN 'assuan'
+	fi
 }
 
 conf_help() {
@@ -92,7 +95,8 @@ if [ ${WITH_ASSUAN} -eq 1 ]; then
 	ASSUAN_LIBS=$(libassuan-config --libs 2>/dev/null)
 	: ${ASSUAN_LIBS:=-lassuan} # fallback
 
-	ASSUAN_CHECK=check-assuan
+	ASSUAN2_CHECK='check-assuan2'
+	ASSUAN_CHECK='check-assuan'
 fi
 
 echo >&2
@@ -101,15 +105,17 @@ echo ">> calling 'make configure' to perform additional tests" >&2
 make ${MAKEFLAGS:-${MAKEOPTS}} -f ${MAKEIN} -k \
 	ASSUAN_CPPFLAGS="${ASSUAN_CPPFLAGS}" \
 	ASSUAN_LIBS="${ASSUAN_LIBS}" \
-	ASSUAN_CHECK="${ASSUAN_CHECK}" \
+	ASSUAN_CHECK="${ASSUAN2_CHECK} ${ASSUAN_CHECK}" \
 	configure
 
 echo "<< 'make configure' done" >&2
 echo >&2
 
 if [ -z "${ASSUAN_CHECK}" -o ! -f "${ASSUAN_CHECK}" ]; then
-	ASSUAN_CPPFLAGS=
-	ASSUAN_LIBS=
+	if [ -z "${ASSUAN2_CHECK}" -o ! -f "${ASSUAN2_CHECK}" ]; then
+		ASSUAN_CPPFLAGS=
+		ASSUAN_LIBS=
+	fi
 fi
 
 conf_results > mirage-config.h
