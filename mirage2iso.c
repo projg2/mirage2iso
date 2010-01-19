@@ -39,6 +39,7 @@
 #endif
 
 #include "mirage-getopt.h"
+#include "mirage-password.h"
 #include "mirage-wrapper.h"
 
 bool quiet = false;
