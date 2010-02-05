@@ -2,7 +2,8 @@
 
 
 == 0.3
-	* support for libassuan 2.0.
+	* support for libassuan 2.0,
+	* tests for various image formats.
 
 == 0.2
 	* new 'configure' script similar to autotools one,
