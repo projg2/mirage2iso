@@ -1,6 +1,9 @@
 * mirage2iso NEWS *
 
 
+== 0.3
+	* support for libassuan 2.0.
+
 == 0.2
 	* new 'configure' script similar to autotools one,
 	* password input support,
