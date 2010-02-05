@@ -5,12 +5,16 @@ BEGIN {
 	print "INPUT = 00_input.iso"
 	print
 	print "all: tests"
+	print "preclean:"
+	print "	rm -f tests-failed"
+
+	failpart = " || ( echo '	$<' >> tests-failed; false )"
 }
 
 {
-	print $2 ": " $1
-	print "	$(MIRAGE2ISO) -q -p test $< $@"
-	print "	cmp $(INPUT) $@"
+	print $2 ": " $1 " preclean"
+	print "	$(MIRAGE2ISO) -q -p test $< $@" failpart
+	print "	cmp $(INPUT) $@" failpart
 
 	all = all " " $2
 }
