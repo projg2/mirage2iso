@@ -19,5 +19,7 @@ END {
 	print "tests: " all
 	print "clean:"
 	print "	rm -f " all
-	print ".PHONY: all tests clean"
+	print "distclean: clean"
+	print "	rm -f Makefile"
+	print ".PHONY: all tests clean distclean"
 }
