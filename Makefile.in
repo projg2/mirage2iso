@@ -61,7 +61,7 @@ distclean: clean confclean
 	[ ! -f tests/Makefile ] || make -C tests distclean
 
 check: $(PROG) tests/Makefile
-	$(MAKE) -k -C tests MIRAGE2ISO=../mirage2iso all && echo 'All tests succeeded.' || ( cd tests/; echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false )
+	[ ! -f tests/Makefile ] || ( $(MAKE) -k -C tests MIRAGE2ISO=../mirage2iso all && echo 'All tests succeeded.' || ( cd tests/; echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false ) )
 
 tests/Makefile: tests/tests-list tests/tests-gen.awk
 	awk -f tests/tests-gen.awk < $< > $@
