@@ -54,9 +54,11 @@ confclean:
 
 clean:
 	rm -f $(PROG) $(OBJS)
+	[ ! -f tests/Makefile ] || make -C tests clean
 
 distclean: clean confclean
 	rm -f Makefile mirage-config.h
+	[ ! -f tests/Makefile ] || make -C tests distclean
 
 check: $(PROG) tests/Makefile
 	$(MAKE) -C tests MIRAGE2ISO=../mirage2iso all
