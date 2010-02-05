@@ -1,3 +1,9 @@
 00_input.iso 00_input.iso.iso
 01_poweriso_bin.cue 01_poweriso_bin.iso
 01_poweriso_bin.bin 01_poweriso_bin_nocue.iso
+02_poweriso-4.6.daa 02_poweriso-4.6.iso
+02_poweriso-4.6-bestcompression.daa 02_poweriso-4.6-bestcompression.iso
+02_poweriso-4.6-encrypted.daa 02_poweriso-4.6-encrypted.iso
+02_poweriso-4.6-split1.part01.daa 02_poweriso-4.6-split1.part01.iso
+02_poweriso-4.6-split2.part001.daa 02_poweriso-4.6-split2.part001.iso
+02_poweriso-4.6-split3.daa 02_poweriso-4.6-split3.iso
