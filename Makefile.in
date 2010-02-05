@@ -11,7 +11,7 @@ CONFIGCLEANADD = check-assuan check-assuan2
 
 DESTDIR = 
 
-.PHONY: all clean confclean configure distclean install
+.PHONY: all clean confclean configure distclean check install
 .SILENT: confclean configure $(CONFIGIN)
 .SUFFIXES: .o .c
 
@@ -57,6 +57,12 @@ clean:
 
 distclean: clean confclean
 	rm -f Makefile mirage-config.h
+
+check: $(PROG) tests/Makefile
+	$(MAKE) -C tests MIRAGE2ISO=../mirage2iso all
+
+tests/Makefile: tests/tests-list tests/tests-gen.awk
+	awk -f tests/tests-gen.awk < $< > $@
 
 install: $(PROG)
 	umask a+rx; mkdir -p "$(DESTDIR)$(BINDIR)"
