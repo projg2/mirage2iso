@@ -21,7 +21,7 @@ conf_results() {
 	conf_check check-mmapio.o NO_MMAPIO 'mmap() & ftruncate()'
 	conf_check check-termios.o NO_TERMIOS 'termios'
 	conf_check "${ASSUAN2_CHECK}" NO_ASSUAN2 'assuan-2'
-	if [ -n "${ASSUAN2_CHECK}" -a ! -f "${ASSUAN2_CHECK}" ]; then
+	if [ ! -f "${ASSUAN2_CHECK}" ]; then
 		conf_check "${ASSUAN_CHECK}" NO_ASSUAN 'assuan'
 	fi
 }
