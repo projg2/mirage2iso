@@ -200,6 +200,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 		switch (mode) {
 			/* supported modes, we set *sectsize and leave unsupp_desc NULL */
 			case MIRAGE_MODE_MODE1:
+			case MIRAGE_MODE_MODE2_FORM1:
 				*sectsize = 2048;
 				break;
 			/* unsupported modes, we leave *sectsize unmodified and set unsupp_desc */
@@ -211,9 +212,6 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 				break;
 			case MIRAGE_MODE_MODE2:
 				unsupp_desc = "a Mode 2";
-				break;
-			case MIRAGE_MODE_MODE2_FORM1:
-				unsupp_desc = "a Mode 2 Form 1";
 				break;
 			case MIRAGE_MODE_MODE2_FORM2:
 				unsupp_desc = "a Mode 2 Form 2";
