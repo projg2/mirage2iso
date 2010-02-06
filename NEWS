@@ -3,9 +3,10 @@
 
 == 0.3
 	* support for libassuan 2.0,
+	* support reading Mode2/Form1 tracks,
 	* tests for various image formats.
 
-== 0.2
+== 0.2 / 5 Sep 2009
 	* new 'configure' script similar to autotools one,
 	* password input support,
 	* support for libmirage 1.2.
