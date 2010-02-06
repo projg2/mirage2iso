@@ -1,7 +1,7 @@
 * mirage2iso NEWS *
 
 
-== 0.3
+== 0.3 / 6 Feb 2010
 	* support for libassuan 2.0,
 	* support reading Mode2/Form1 tracks,
 	* tests for various image formats.
