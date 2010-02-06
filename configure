@@ -44,6 +44,10 @@ Options:
 _EOF_
 }
 
+# clean up the env
+
+unset PREFIX EPREFIX BINDIR WITH_ASSUAN
+
 # parse command-line arguments
 
 while [ $# -gt 0 ]; do
@@ -52,7 +56,7 @@ while [ $# -gt 0 ]; do
 			PREFIX=${1#--prefix=}
 			;;
 		--exec-prefix=*)
-			EPREFIX=${1#--eprefix=}
+			EPREFIX=${1#--exec-prefix=}
 			;;
 		--bindir=*)
 			BINDIR=${1#--bindir=}
@@ -97,6 +101,8 @@ if [ ${WITH_ASSUAN} -eq 1 ]; then
 
 	ASSUAN2_CHECK='check-assuan2'
 	ASSUAN_CHECK='check-assuan'
+else
+	unset ASSUAN2_CHECK ASSUAN_CHECK
 fi
 
 echo >&2
