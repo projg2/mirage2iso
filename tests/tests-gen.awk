@@ -21,7 +21,7 @@ BEGIN {
 
 END {
 	print "tests: " all
-	print "clean:"
+	print "clean: preclean"
 	print "	rm -f " all
 	print "distclean: clean"
 	print "	rm -f Makefile"
