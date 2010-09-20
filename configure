@@ -16,6 +16,13 @@ conf_check() {
 }
 
 conf_results() {
+	if [ "${ENABLE_LFS}" = "1" ]; then
+	    echo "Enabling Large File Support (if available)." >&2
+	    echo '#define _LARGEFILE_SOURCE'
+	    echo '#define _LARGEFILE64_SOURCE'
+	    echo '#define _FILE_OFFSET_BITS 64'
+	fi
+
 	conf_check check-getopt.o NO_GETOPT_LONG 'getopt_long()'
 	conf_check check-sysexits.o NO_SYSEXITS '<sysexits.h>'
 	conf_check check-mmapio.o NO_MMAPIO 'mmap() & ftruncate()'
@@ -41,13 +48,14 @@ Options:
 				(\${BINDIR}, default: \${EPREFIX}/bin)
 
 	--without-assuan	Disable use of assuan
+	--disable-lfs		Disable Large File Support
 
 _EOF_
 }
 
 # clean up the env
 
-unset PREFIX EPREFIX BINDIR WITH_ASSUAN
+unset PREFIX EPREFIX BINDIR WITH_ASSUAN ENABLE_LFS
 
 # parse command-line arguments
 
@@ -68,6 +76,12 @@ while [ $# -gt 0 ]; do
 		--without-assuan)
 			WITH_ASSUAN=0
 			;;
+		--enable-lfs)
+			ENABLE_LFS=1
+			;;
+		--disable-lfs)
+			ENABLE_LFS=0
+			;;
 		--help)
 			conf_help
 			exit 1
@@ -81,6 +95,7 @@ done
 : ${BINDIR=${EPREFIX}/bin}
 
 : ${WITH_ASSUAN:=1}
+: ${ENABLE_LFS:=1}
 
 if ! pkg-config --exists libmirage; then
 	echo "Your pkg-config is unable to find libmirage." >&2
