@@ -93,6 +93,11 @@ static int mmapio_open(const char* const fn, const size_t size, FILE** const f, 
 			return EX_IOERR;
 	}
 
+#ifdef POSIX_FADV_NOREUSE
+	if ((errno = posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE)))
+		perror("posix_fadvise() failed");
+#endif
+
 	void* const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buf == MAP_FAILED)
 		perror("mmap() failed");
@@ -113,6 +118,15 @@ static int stdio_open(const char* const fn, FILE** const f) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
+
+#ifndef NO_MMAPIO /* POSIX headers, in this case */
+#	ifdef POSIX_FADV_NOREUSE
+	
+	if (f && ((errno = posix_fadvise(fileno(*f), 0, 0, POSIX_FADV_NOREUSE))))
+		perror("posix_fadvise() failed");
+
+#	endif
+#endif
 
 	return EX_OK;
 }
