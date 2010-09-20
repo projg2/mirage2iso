@@ -19,6 +19,7 @@ conf_results() {
 	conf_check check-getopt.o NO_GETOPT_LONG 'getopt_long()'
 	conf_check check-sysexits.o NO_SYSEXITS '<sysexits.h>'
 	conf_check check-mmapio.o NO_MMAPIO 'mmap() & ftruncate()'
+	conf_check check-falloc.o NO_FALLOCATE 'posix_fallocate()'
 	conf_check check-termios.o NO_TERMIOS 'termios'
 	conf_check "${ASSUAN2_CHECK}" NO_ASSUAN2 'assuan-2'
 	if [ ! -f "${ASSUAN2_CHECK}" ]; then

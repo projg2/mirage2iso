@@ -5,7 +5,7 @@
 
 #include "mirage-config.h"
 
-#ifndef NO_MMAPIO
+#if !defined(NO_MMAPIO) || !defined(NO_FTRUNCATE)
 #	define _POSIX_C_SOURCE 200112L
 #else
 #	define _ISOC99_SOURCE 1
@@ -23,6 +23,10 @@
 #	include <sys/mman.h>
 #	include <fcntl.h>
 #	include <unistd.h>
+#else
+#	ifndef NO_FALLOCATE
+#		include <fcntl.h>
+#	endif
 #endif
 
 #ifndef NO_SYSEXITS
@@ -74,15 +78,44 @@ static void version(const bool mirage) {
 	fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
 }
 
+static bool common_posix_filesetup(const int fd, const size_t size) {
+#ifdef POSIX_FADV_NOREUSE
+	if ((errno = posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE)))
+		perror("posix_fadvise() failed");
+#endif
+
+#ifndef NO_FALLOCATE
+	if ((errno = posix_fallocate(fd, 0, size))) {
+		perror("posix_fallocate() failed");
+
+		/* If we can't create file large enough, return false.
+		 * Otherwise, try to proceed. */
+#ifdef EFBIG
+		if (errno == EFBIG)
+			return false;
+#endif
+#ifdef ENOSPC
+		if (errno == ENOSPC)
+			return false;
+#endif
+	}
+#endif
+
+	return true;
+}
+
 #ifndef NO_MMAPIO
 static int mmapio_open(const char* const fn, const size_t size, FILE** const f, void** const out) {
-	*f = fopen(fn, "a+b");
+	*f = fopen(fn, "w+b");
 	if (!*f) {
 		perror("Unable to open output file");
 		return EX_CANTCREAT;
 	}
 
 	const int fd = fileno(*f);
+
+	if (!common_posix_filesetup(fd, size))
+		return EX_CANTCREAT;
 
 	if (ftruncate(fd, size) == -1) {
 		perror("ftruncate() failed");
@@ -92,11 +125,6 @@ static int mmapio_open(const char* const fn, const size_t size, FILE** const f, 
 		else
 			return EX_IOERR;
 	}
-
-#ifdef POSIX_FADV_NOREUSE
-	if ((errno = posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE)))
-		perror("posix_fadvise() failed");
-#endif
 
 	void* const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buf == MAP_FAILED)
@@ -108,7 +136,7 @@ static int mmapio_open(const char* const fn, const size_t size, FILE** const f, 
 }
 #endif
 
-static int stdio_open(const char* const fn, FILE** const f) {
+static int stdio_open(const char* const fn, const size_t size, FILE** const f) {
 	if (*f)
 		*f = freopen(fn, "wb", *f);
 	else
@@ -119,13 +147,9 @@ static int stdio_open(const char* const fn, FILE** const f) {
 		return EX_CANTCREAT;
 	}
 
-#ifndef NO_MMAPIO /* POSIX headers, in this case */
-#	ifdef POSIX_FADV_NOREUSE
-	
-	if (f && ((errno = posix_fadvise(fileno(*f), 0, 0, POSIX_FADV_NOREUSE))))
-		perror("posix_fadvise() failed");
-
-#	endif
+#if !defined(NO_MMAPIO) || !defined(NO_FALLOCATE)
+	if (!common_posix_filesetup(fileno(*f), size))
+		return EX_CANTCREAT;
 #endif
 
 	return EX_OK;
@@ -140,7 +164,7 @@ static int output_track(const char* const fn, const int track_num) {
 
 	FILE *f = NULL;
 	void *out = NULL;
-	int ret;
+	int ret = EX_OK;
 
 	if (use_stdout) {
 		f = stdout;
@@ -149,15 +173,24 @@ static int output_track(const char* const fn, const int track_num) {
 			fprintf(stderr, "Using standard output stream for track %d\n", track_num);
 	} else {
 #ifndef NO_MMAPIO
-		if (!force_stdio && ((ret = mmapio_open(fn, size, &f, &out))) != EX_OK) {
-			if (f && fclose(f))
-				perror("fclose() failed");
-			return ret;
-		}
+		if (!force_stdio)
+			ret = mmapio_open(fn, size, &f, &out);
 #endif
 
-		if (!out && ((ret = stdio_open(fn, &f))) != EX_OK)
+		if (!ret && !out)
+			ret = stdio_open(fn, size, &f);
+
+		if (ret) {
+			if (f) {
+				if (fclose(f))
+					perror("fclose() failed");
+				/* We probably ate the whole disk space, so unlink the file. */
+				if (remove(fn))
+					perror("remove() failed");
+			}
+
 			return ret;
+		}
 
 		if (verbose)
 			fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
