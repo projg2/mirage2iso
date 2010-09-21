@@ -3,6 +3,9 @@
 # (c) 2009 Michał Górny
 # released under 3-clause BSD license
 
+PN=mirage2iso
+PV=0.3
+
 conf_check() {
 	if [ -z "$1" ]; then
 		echo "#define $2 1"
@@ -36,40 +39,15 @@ conf_results() {
 
 conf_help() {
 	cat <<_EOF_
-Synopsis:
-	./configure [options]
-
-Options:
-	--prefix=DIR		Prefix used to install arch-independent files
-				(\${PREFIX}, default: /usr/local)
-	--exec-prefix=DIR	Prefix used to install arch-dependent files
-				(\${EPREFIX}, default: \${PREFIX})
-	--bindir=DIR		Path to install user binaries
-				(\${BINDIR}, default: \${EPREFIX}/bin)
-
 	--without-assuan	Disable use of assuan
 	--disable-lfs		Disable Large File Support
-
 _EOF_
 }
 
-# clean up the env
+unset WITH_ASSUAN ENABLE_LFS
 
-unset PREFIX EPREFIX BINDIR WITH_ASSUAN ENABLE_LFS
-
-# parse command-line arguments
-
-while [ $# -gt 0 ]; do
-	case "$1" in
-		--prefix=*)
-			PREFIX=${1#--prefix=}
-			;;
-		--exec-prefix=*)
-			EPREFIX=${1#--exec-prefix=}
-			;;
-		--bindir=*)
-			BINDIR=${1#--bindir=}
-			;;
+conf_arg_parse() {
+	case "${1}" in
 		--with-assuan)
 			WITH_ASSUAN=1
 			;;
@@ -82,17 +60,14 @@ while [ $# -gt 0 ]; do
 		--disable-lfs)
 			ENABLE_LFS=0
 			;;
-		--help)
-			conf_help
-			exit 1
+		*)
+			return 1
 	esac
 
-	shift
-done
+	return 0
+}
 
-: ${PREFIX=/usr/local}
-: ${EPREFIX=${PREFIX}}
-: ${BINDIR=${EPREFIX}/bin}
+. ./fastconf.sh
 
 : ${WITH_ASSUAN:=1}
 : ${ENABLE_LFS:=1}
