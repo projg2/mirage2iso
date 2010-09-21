@@ -50,19 +50,19 @@ conf_check() {
 conf_results() {
 	if [ "${ENABLE_LFS}" = "1" ]; then
 	    echo "Enabling Large File Support (if available)." >&2
-	    echo '#define _LARGEFILE_SOURCE'
-	    echo '#define _LARGEFILE64_SOURCE'
-	    echo '#define _FILE_OFFSET_BITS 64'
+		fc_def _LARGEFILE_SOURCE
+		fc_def _LARGEFILE64_SOURCE
+		fc_def _FILE_OFFSET_BITS 64
 	fi
 
-	conf_check check-getopt NO_GETOPT_LONG 'getopt_long()'
-	conf_check check-sysexits NO_SYSEXITS '<sysexits.h>'
-	conf_check check-mmapio NO_MMAPIO 'mmap() & ftruncate()'
-	conf_check check-falloc NO_FALLOCATE 'posix_fallocate()'
-	conf_check check-termios NO_TERMIOS 'termios'
-	conf_check check-assuan2 NO_ASSUAN2 'assuan-2'
-	if [ ! -f check-assuan2 ]; then
-		conf_check check-assuan NO_ASSUAN 'assuan'
+	fc_check getopt 'getopt_long()' || fc_def NO_GETOPT_LONG
+	fc_check sysexits '<sysexits.h>' || fc_def NO_SYSEXITS
+	fc_check mmapio 'mmap() & ftruncate()' || fc_def NO_MMAPIO
+	fc_check falloc 'posix_fallocate()' || fc_def NO_FALLOCATE
+	fc_check termios 'termios' || fc_def NO_TERMIOS
+	if ! fc_check assuan2 'assuan-2'; then
+		fc_def NO_ASSUAN2
+		fc_check assuan 'assuan' || fc_def NO_ASSUAN
 	fi
 }
 

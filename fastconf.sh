@@ -271,6 +271,40 @@ confclean:
 _EOF_
 }
 
+# Synopsis: fc_def <name> [<val>]
+# Output '#define <name> <val>'.
+fc_def() {
+	echo "#define ${1}${2+ ${2}}"
+}
+
+# Synopsis: fc_check <name> [<desc>]
+# Check whether the check <name> succeeded and return either true
+# or false. If <desc> is provided, print either "<desc> found"
+# or "<desc> unavailable."
+fc_check() {
+	local testname testdesc
+	testname=check-${1}
+	testdesc=${2}
+
+	set -- ${FC_TESTLIST}
+	while [ ${#} -ge 1 ]; do
+		if [ "${1}" = "${testname}" ]; then
+			if [ -f "${1}" ]; then
+				[ -n "${testdesc}" ] && echo "${testdesc} found." >&2
+				return 0
+			else
+				[ -n "${testdesc}" ] && echo "${testdesc} unavailable." >&2
+				return 1
+			fi
+		fi
+
+		shift
+	done
+
+	[ -n "${testdesc}" ] && echo "${testdesc} explicitly disabled." >&2
+	return 2
+}
+
 # INITIALIZATION RULES
 
 _fc_cmdline_unset
