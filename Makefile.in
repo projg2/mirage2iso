@@ -5,14 +5,9 @@
 PROG = mirage2iso
 OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
 
-CONFIGTESTS = check-getopt.o check-sysexits.o check-mmapio.o check-falloc.o check-termios.o $(ASSUAN_CHECK)
-CONFIGIN = check-getopt.c check-sysexits.c check-mmapio.c check-termios.c check-falloc.c check-assuan.c check-assuan2.c
-CONFIGCLEANADD = check-assuan check-assuan2
-
 DESTDIR = 
 
-.PHONY: all clean confclean configure distclean check install
-.SILENT: confclean configure $(CONFIGIN)
+.PHONY: all clean distclean check install
 .SUFFIXES: .o .c
 
 all: $(PROG)
@@ -23,43 +18,11 @@ $(PROG): $(PROG).c $(OBJS)
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(CONF_CPPFLAGS) -c -o $@ $<
 
-configure: $(CONFIGTESTS)
-
-check-getopt.c:
-	printf '#define _GNU_SOURCE 1\n#include <getopt.h>\nint main(int argc, char *argv[]) { getopt_long(argc, argv, "", 0, 0); return 0; }\n' > $@
-
-check-sysexits.c:
-	printf '#include <sysexits.h>\nint main(int argc, char *argv[]) { return EX_OK + EX_IOERR; }\n' > $@
-
-check-mmapio.c:
-	printf '#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>\nint main(void) { return (ftruncate(0, 0) || mmap(0, 0, 0, 0, 0, 0) == MAP_FAILED); }\n' > $@
-
-check-falloc.c:
-	printf '#define _POSIX_C_SOURCE 200112L\n#include <fcntl.h>\nint main(void) { return fallocate(0, 0, 0); }\n' > $@
-
-check-termios.c:
-	printf '#define _POSIX_C_SOURCE 200112L\n#include <stdio.h>\n#include <termios.h>\n#include <unistd.h>\nint main(void) { struct termios term; return tcgetattr(fileno(stdin), &term); }\n' > $@
-
-check-assuan.c:
-	printf '#define _ISO_C99_SOURCE 1\n#include <assuan.h>\nint main(void) { assuan_context_t ctx; assuan_error_t ret = assuan_pipe_connect(&ctx, "/bin/true", 0, 0); assuan_disconnect(ctx); return ret; }\n' > $@
-
-check-assuan2.c:
-	printf '#define _ISO_C99_SOURCE 1\n#include <gpg-error.h>\n#include <assuan.h>\nint main(void) { assuan_context_t ctx; assuan_new(&ctx); gpg_error_t ret = assuan_pipe_connect(ctx, "/bin/true", 0, 0, 0, 0, 0); assuan_release(ctx); return ret; }\n' > $@
-
-check-assuan: check-assuan.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(ASSUAN_CPPFLAGS) $(LDFLAGS) -o $@ $< $(LIBS) $(ASSUAN_LIBS)
-
-check-assuan2: check-assuan2.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(ASSUAN_CPPFLAGS) $(LDFLAGS) -o $@ $< $(LIBS) $(ASSUAN_LIBS)
-
-confclean:
-	rm -f $(CONFIGTESTS) $(CONFIGIN) $(CONFIGCLEANADD)
-
 clean:
 	rm -f $(PROG) $(OBJS)
 	[ ! -f tests/Makefile ] || make -C tests clean
 
-distclean: clean confclean
+distclean: clean
 	rm -f Makefile mirage-config.h
 	[ ! -f tests/Makefile ] || make -C tests distclean
 

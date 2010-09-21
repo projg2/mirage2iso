@@ -170,6 +170,10 @@ _fc_cmdline_parse() {
 	done
 }
 
+# Callback: conf_cmdline_parsed
+# Mandatory. Called when command-line parsing is done. Should setup
+# local defaults and parse the results.
+
 # Synopsis: _fc_cmdline_default
 # Set default paths for directories not matched by _fc_cmdline_parse().
 _fc_cmdline_default() {
@@ -191,7 +195,88 @@ _fc_cmdline_default() {
 	: ${HTMLDIR=${DOCDIR}}
 }
 
+# PART II
+# System checks support
+
+# Synopsis: _fc_mkrule_code <name> <includes> <code>
+# Output a Makefile rule creating a simple C program code using passed
+# <includes> and <code>. The program would take the form of:
+#	<includes>
+#	int main(int argc, char *argv[]) { <code> }
+# where <includes> and <code> can contain escapes and apostrophes have
+# to be escaped.
+_fc_mkrule_code() {
+	printf "%s.c:\n\t@printf '%%b%s { %%b }%s' '%s' '%s' > \$@\n" \
+		"${1}" '\nint main(int argc, char *argv[])' '\n' "${2}" "${3}"
+}
+
+# Synopsis: _fc_mkcall_link <infiles> [<cppflags>] [<libs>]
+_fc_mkcall_link() {
+	printf '\t%s %s %s %s %s %s\n' \
+		'$(CC) $(CFLAGS) $(CPPFLAGS)' "${2}" \
+		'$(LDFLAGS) -o $@' "${1}" \
+		'$(LIBS)' "${3}"
+}
+
+# Synopsis: _fc_mkrule_compile_and_link <name> [<cppflags>] [<libs>]
+_fc_mkrule_compile_and_link() {
+	printf "%s: %s.c\n" "${1}" "${1}"
+	_fc_mkcall_link '$<' "${2}" "${3}"
+}
+
+# Synopsis: _fc_append_test <name>
+_fc_append_test() {
+	FC_TESTLIST=${FC_TESTLIST+${FC_TESTLIST} }${1}
+}
+
+# Synopsis: _fc_append_source <name.c>
+_fc_append_source() {
+	FC_TESTLIST_SOURCES=${FC_TESTLIST_SOURCES+${FC_TESTLIST_SOURCES} }${1}
+}
+
+# Synopsis: fc_try_link <name> <includes> <code> [<cppflags>] [<libs>]
+# Output a Makefile rule trying to link a test program <name>, passing
+# <cppflags> and <libs> to the compiler. For the description of
+# <includes> and <code> see _fc_mkrule_code().
+fc_try_link() {
+	_fc_mkrule_code "check-${1}" "${2}" "${3}"
+	_fc_mkrule_compile_and_link "check-${1}" "${4}" "${5}"
+	echo
+
+	_fc_append_test "check-${1}"
+	_fc_append_source "check-${1}.c"
+}
+
+fc_setup_makefile() {
+	unset FC_TESTLIST FC_TESTLIST_SOURCES
+
+	echo '# generated automatically by ./configure' > "${1}"
+	echo '# please modify ./configure or Makefile.in instead' >> "${1}"
+	echo >> "${1}"
+
+	conf_get_tests >> "${1}"
+
+	cat - "${2}" >> "${1}" <<_EOF_
+.PHONY: config confclean
+
+config:
+	@echo "** MAKE CONFIG STARTING **" >&2
+	@+\$(MAKE) confclean
+	-+\$(MAKE) -k ${FC_TESTLIST}
+	#@+\$(MAKE) confclean
+	@echo "** MAKE CONFIG FINISHED **" >&2
+
+confclean:
+	@rm -f ${FC_TESTLIST} ${FC_TESTLIST_SOURCES}
+_EOF_
+}
+
+# INITIALIZATION RULES
+
 _fc_cmdline_unset
 _fc_cmdline_parse "${@}"
 _fc_cmdline_default
 
+conf_cmdline_parsed
+
+fc_setup_makefile Makefile Makefile.in
