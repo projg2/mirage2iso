@@ -114,6 +114,16 @@ conf_cmdline_parsed() {
 	: ${WITH_ASSUAN:=1}
 	: ${ENABLE_LFS:=1}
 
+	if ! pkg-config --exists libmirage; then
+		echo "Your pkg-config is unable to find libmirage." >&2
+		echo >&2
+		echo "To be able to build mirage2iso, you need to have both pkg-config" >&2
+		echo "and libmirage with development headers installed." >&2
+		exit 1
+	else
+		echo 'libmirage found.'
+	fi
+
 	if [ ${WITH_ASSUAN} -eq 1 ]; then
 		# Both can fail
 		ASSUAN_CPPFLAGS=$(libassuan-config --cflags 2>/dev/null)
@@ -121,15 +131,5 @@ conf_cmdline_parsed() {
 		: ${ASSUAN_LIBS:=-lassuan} # fallback
 	fi
 }
-
-if ! pkg-config --exists libmirage; then
-	echo "Your pkg-config is unable to find libmirage." >&2
-	echo >&2
-	echo "To be able to build mirage2iso, you need to have both pkg-config" >&2
-	echo "and libmirage with development headers installed." >&2
-	exit 1
-else
-	echo 'libmirage found.'
-fi
 
 . ./fastconf.sh
