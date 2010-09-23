@@ -50,7 +50,8 @@ conf_get_targets() {
 	fc_cc_build ${PN} 'mirage2iso.c mirage-getopt.c mirage-wrapper.c mirage-password.c' \
 		'$(CONF_CPPFLAGS)' '$(CONF_LIBS)' '$(CONF_LDFLAGS)'
 
-	fc_set_target all ${PN}
+	fc_install '$(DOCDIR)' NEWS README
+	fc_install_exe '$(BINDIR)' ${PN}
 }
 
 conf_check_results() {

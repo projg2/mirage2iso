@@ -1,7 +1,3 @@
-# mirage2iso
-# (c) 2009 Michał Górny
-# released under 3-clause BSD license
-
 .PHONY: check install
 
 check: default tests/Makefile
@@ -9,8 +5,3 @@ check: default tests/Makefile
 
 tests/Makefile: tests/tests-list tests/tests-gen.awk
 	awk -f tests/tests-gen.awk < $< > $@
-
-install: default
-	umask a+rx; mkdir -p "$(DESTDIR)$(BINDIR)"
-	cp $(PROG) "$(DESTDIR)$(BINDIR)/"
-	chmod a+rx "$(DESTDIR)$(BINDIR)/$(PROG)"

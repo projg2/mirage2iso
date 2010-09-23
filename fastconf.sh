@@ -36,6 +36,9 @@ fi
 # name.
 : ${FC_CONFIG_H:=config.h}
 
+: ${FC_INSTALL_UMASK:=a+rx}
+: ${FC_INSTALL_CHMOD:=a+r}
+
 # PART I
 # command-line parsing
 
@@ -370,6 +373,37 @@ fc_set_target() {
 	FC_TARGETLIST=${FC_TARGETLIST+${FC_TARGETLIST} }${1}
 }
 
+# Synopsis: fc_install_dir <dir>
+# Setup creating <dir> along with parent directories, making them all
+# world-readable.
+_fc_install_dir() {
+	FC_INSTALL="${FC_INSTALL}
+	umask ${FC_INSTALL_UMASK}; mkdir -p \"\$(DESTDIR)${1}\""
+}
+
+# Synopsis: fc_install <dest> <files>
+# Setup installing <files> into <dest>, creating parent directories if
+# necessary and making them world-readable afterwards.
+fc_install() {
+	local dest
+	dest=${1}
+	shift
+
+	_fc_install_dir "${dest}"
+	FC_INSTALL="${FC_INSTALL}
+	cp ${@} \"\$(DESTDIR)${dest}\"
+	cd \"\$(DESTDIR)${dest}\" && chmod ${FC_INSTALL_CHMOD} ${@}"
+
+	FC_INSTALL_PREREQS=${FC_INSTALL_PREREQS+${FC_INSTALL_PREREQS} }${@}
+}
+
+# Synopsis: fc_install_exe <dest> <files>
+# Setup installing <files> into <dest>, creating parent directories if
+# necessary and making them world-executable afterwards.
+fc_install_exe() {
+	FC_INSTALL_CHMOD=a+rx fc_install "${@}"
+}
+
 # Synopsis: _fc_build [<target>]
 # Call make to build target <target> (or the default one if no target is
 # passed), passing the necessary defines to make.
@@ -394,7 +428,8 @@ _fc_build() {
 # Create an actual Makefile in file <out>, appending the file <in>
 # afterwards.
 fc_setup_makefile() {
-	unset FC_TESTLIST FC_TESTLIST_SOURCES FC_OUTPUTLIST FC_TARGETLIST
+	unset FC_TESTLIST FC_TESTLIST_SOURCES FC_OUTPUTLIST FC_TARGETLIST \
+		FC_INSTALL FC_INSTALL_PREREQS
 
 	cat > "${1}" <<_EOF_
 # generated automatically by ./configure
@@ -450,8 +485,12 @@ clean:
 distclean: clean confclean
 	rm -f Makefile ${FC_CONFIG_H}
 
-.PHONY: clean config confclean default distclean \
-	${FC_TARGETLIST}
+.PHONY: all clean config confclean default distclean \
+	${FC_TARGETLIST} ${FC_INSTALL+install}
+
+all: ${FC_INSTALL_PREREQS}
+
+${FC_INSTALL+install: default${FC_INSTALL}}
 _EOF_
 	rm -f ${FC_CONFIG_H}
 }
