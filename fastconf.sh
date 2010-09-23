@@ -217,13 +217,13 @@ _fc_cmdline_default() {
 #	int main(int argc, char *argv[]) { <code> }
 # where <includes> and <code> can contain escapes and apostrophes have
 # to be escaped.
-_fc_mkrule_code() {
+_fc_cc_mkrule_code() {
 	printf "%s.c:\n\t@printf '%%b%s { %%b }%s' '%s' '%s' > \$@\n" \
 		"${1}" '\nint main(int argc, char *argv[])' '\n' "${2}" "${3}"
 }
 
 # Synopsis: _fc_mkcall_link <infiles> [<cppflags>] [<libs>]
-_fc_mkcall_link() {
+_fc_cc_mkcall_link() {
 	printf '\t%s %s %s %s %s %s\n' \
 		'$(CC) $(CFLAGS) $(CPPFLAGS)' "${2}" \
 		'$(LDFLAGS) -o $@' "${1}" \
@@ -231,9 +231,9 @@ _fc_mkcall_link() {
 }
 
 # Synopsis: _fc_mkrule_compile_and_link <name> [<cppflags>] [<libs>]
-_fc_mkrule_compile_and_link() {
+_fc_cc_mkrule_compile_and_link() {
 	printf "%s: %s.c\n" "${1}" "${1}"
-	_fc_mkcall_link '$<' "${2}" "${3}"
+	_fc_cc_mkcall_link '$<' "${2}" "${3}"
 }
 
 # Synopsis: _fc_append_test <name>
@@ -246,13 +246,13 @@ _fc_append_source() {
 	FC_TESTLIST_SOURCES=${FC_TESTLIST_SOURCES+${FC_TESTLIST_SOURCES} }${1}
 }
 
-# Synopsis: fc_try_link <name> <includes> <code> [<cppflags>] [<libs>]
+# Synopsis: fc_cc_try_link <name> <includes> <code> [<cppflags>] [<libs>]
 # Output a Makefile rule trying to link a test program <name>, passing
 # <cppflags> and <libs> to the compiler. For the description of
 # <includes> and <code> see _fc_mkrule_code().
-fc_try_link() {
-	_fc_mkrule_code "check-${1}" "${2}" "${3}"
-	_fc_mkrule_compile_and_link "check-${1}" "${4}" "${5}"
+fc_cc_try_link() {
+	_fc_cc_mkrule_code "check-${1}" "${2}" "${3}"
+	_fc_cc_mkrule_compile_and_link "check-${1}" "${4}" "${5}"
 	echo
 
 	_fc_append_test "check-${1}"

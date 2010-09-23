@@ -9,19 +9,19 @@ PV=0.3
 FC_CONFIG_H=mirage-config.h
 
 conf_get_tests() {
-	fc_try_link getopt \
+	fc_cc_try_link getopt \
 		'#define _GNU_SOURCE 1\n#include <getopt.h>' \
 		'getopt_long(argc, argv, "", 0, 0); return 0;'
-	fc_try_link sysexits \
+	fc_cc_try_link sysexits \
 		'#include <sysexits.h>' \
 		'return EX_OK + EX_IOERR;'
-	fc_try_link mmapio \
+	fc_cc_try_link mmapio \
 		'#define _POSIX_C_SOURCE 200112L\n#include <unistd.h>\n#include <sys/types.h>\n#include <sys/mman.h>' \
 		'return (ftruncate(0, 0) || mmap(0, 0, 0, 0, 0, 0) == MAP_FAILED);'
-	fc_try_link falloc \
+	fc_cc_try_link falloc \
 		'#define _POSIX_C_SOURCE 200112L\n#include <fcntl.h>' \
 		'return fallocate(0, 0, 0);'
-	fc_try_link termios \
+	fc_cc_try_link termios \
 		'#define _POSIX_C_SOURCE 200112L\n#include <stdio.h>\n#include <termios.h>\n#include <unistd.h>' \
 		'struct termios term; return tcgetattr(fileno(stdin), &term);'
 
@@ -29,11 +29,11 @@ conf_get_tests() {
 		fc_export ASSUAN_CPPFLAGS "${ASSUAN_CPPFLAGS}"
 		fc_export ASSUAN_LIBS "${ASSUAN_LIBS}"
 
-		fc_try_link assuan \
+		fc_cc_try_link assuan \
 			'#define _ISO_C99_SOURCE 1\n#include <assuan.h>' \
 			'assuan_context_t ctx; assuan_error_t ret = assuan_pipe_connect(&ctx, "/bin/true", 0, 0); assuan_disconnect(ctx); return ret;' \
 			'$(ASSUAN_CPPFLAGS)' '$(ASSUAN_LIBS)'
-		fc_try_link assuan2 \
+		fc_cc_try_link assuan2 \
 			'#define _ISO_C99_SOURCE 1\n#include <gpg-error.h>\n#include <assuan.h>' \
 			'assuan_context_t ctx; assuan_new(&ctx); gpg_error_t ret = assuan_pipe_connect(ctx, "/bin/true", 0, 0, 0, 0, 0); assuan_release(ctx); return ret;' \
 			'$(ASSUAN_CPPFLAGS)' '$(ASSUAN_LIBS)'
