@@ -190,21 +190,21 @@ _fc_cmdline_parse() {
 # Set default paths for directories not matched by _fc_cmdline_parse().
 _fc_cmdline_default() {
 	: ${PREFIX=/usr/local}
-	: ${EXEC_PREFIX=${PREFIX}}
+	: ${EXEC_PREFIX=\$(PREFIX)}
 
-	: ${BINDIR=${EXEC_PREFIX}/bin}
-	: ${SBINDIR=${EXEC_PREFIX}/sbin}
-	: ${LIBEXECDIR=${EXEC_PREFIX}/libexec}
-	: ${SYSCONFDIR=${PREFIX}/etc}
-	: ${LOCALSTATEDIR=${PREFIX}/var}
-	: ${LIBDIR=${EXEC_PREFIX}/lib}
-	: ${INCLUDEDIR=${PREFIX}/include}
-	: ${DATAROOTDIR=${PREFIX}/share}
-	: ${DATADIR=${DATADIR}}
-	: ${LOCALEDIR=${DATAROOTDIR}/locale}
-	: ${MANDIR=${DATAROOTDIR}/man}
-	: ${DOCDIR=${DATAROOTDIR}/doc/${PACKAGE}}
-	: ${HTMLDIR=${DOCDIR}}
+	: ${BINDIR=\$(EXEC_PREFIX)/bin}
+	: ${SBINDIR=\$(EXEC_PREFIX)/sbin}
+	: ${LIBEXECDIR=\$(EXEC_PREFIX)/libexec}
+	: ${SYSCONFDIR=\$(PREFIX)/etc}
+	: ${LOCALSTATEDIR=\$(PREFIX)/var}
+	: ${LIBDIR=\$(EXEC_PREFIX)/lib}
+	: ${INCLUDEDIR=\$(PREFIX)/include}
+	: ${DATAROOTDIR=\$(PREFIX)/share}
+	: ${DATADIR=\$(DATADIR)}
+	: ${LOCALEDIR=\$(DATAROOTDIR)/locale}
+	: ${MANDIR=\$(DATAROOTDIR)/man}
+	: ${DOCDIR=\$(DATAROOTDIR)/doc/${PACKAGE}}
+	: ${HTMLDIR=\$(DOCDIR)}
 }
 
 # PART II
