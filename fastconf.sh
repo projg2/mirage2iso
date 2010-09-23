@@ -36,6 +36,9 @@ fi
 # name.
 : ${FC_CONFIG_H:=config.h}
 
+# The file to be appended to the Makefile. None if unset.
+: ${FC_MAKEFILE_IN}
+
 : ${FC_INSTALL_UMASK:=a+rx}
 : ${FC_INSTALL_CHMOD:=a+r}
 : ${FC_INSTALL_CHMOD_EXE:=a+rx}
@@ -448,16 +451,16 @@ _fc_setup_subdir_rules() {
 # for the Makefile. This should output targets for both the configure
 # and build phases.
 
-# Synopsis: fc_setup_makefile <out> <in>
+# Synopsis: fc_setup_makefile <out> [<in>]
 # Create an actual Makefile in file <out>, appending the file <in>
-# afterwards.
+# afterwards (if supplied).
 fc_setup_makefile() {
 	unset FC_TESTLIST FC_TESTLIST_SOURCES FC_OUTPUTLIST FC_TARGETLIST \
 		FC_INSTALL FC_INSTALL_PREREQS FC_SUBDIRS
 
 	cat > "${1}" <<_EOF_
 # generated automatically by ./configure
-# please modify ./configure or Makefile.in instead
+# please modify ./configure${2+ ${2}} instead
 
 DESTDIR =
 
@@ -486,7 +489,7 @@ _EOF_
 
 	conf_get_targets >> "${1}"
 
-	cat - "${2}" >> "${1}" <<_EOF_
+	cat - ${2} >> "${1}" <<_EOF_
 
 config:
 	@rm -f ${FC_CONFIG_H}
@@ -529,5 +532,5 @@ _fc_cmdline_unset
 _fc_cmdline_parse "${@}"
 _fc_cmdline_default
 
-fc_setup_makefile Makefile Makefile.in
+fc_setup_makefile Makefile ${FC_MAKEFILE_IN}
 exit 0

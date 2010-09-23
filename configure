@@ -7,6 +7,7 @@ PN=mirage2iso
 PV=0.3
 
 FC_CONFIG_H=mirage-config.h
+FC_MAKEFILE_IN=Makefile.in
 
 conf_get_targets() {
 	# post command-line parsing tasks
