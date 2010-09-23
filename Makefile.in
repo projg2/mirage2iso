@@ -1,4 +1,4 @@
-.PHONY: check install
+.PHONY: check
 
 check: default tests/Makefile
 	[ ! -f tests/Makefile ] || ( $(MAKE) -k -C tests MIRAGE2ISO=../mirage2iso all && echo 'All tests succeeded.' || ( cd tests/; echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false ) )

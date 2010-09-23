@@ -373,6 +373,13 @@ fc_set_target() {
 	FC_TARGETLIST=${FC_TARGETLIST+${FC_TARGETLIST} }${1}
 }
 
+# Synopsis: fc_add_subdir <subdir>
+# Support descending into a subdirectory <subdir> within the default
+# targets.
+fc_add_subdir() {
+	FC_SUBDIRS=${FC_SUBDIRS+${FC_SUBDIRS} }${1}
+}
+
 # Synopsis: fc_install_dir <dir>
 # Setup creating <dir> along with parent directories, making them all
 # world-readable.
@@ -419,6 +426,15 @@ _fc_build() {
 	make "${@}"
 }
 
+# Synopsis: _fc_setup_subdir_rules <target>
+_fc_setup_subdir_rules() {
+	local d
+
+	for d in ${FC_SUBDIRS}; do
+		printf '\t+[ ! -f "%s"/Makefile ] || { cd "%s" && make %s; }' ${d} ${d} ${1}
+	done
+}
+
 # Callback: conf_get_targets
 # Called by fc_setup_makefile() in order to get the complete target list
 # for the Makefile. This should output targets for both the configure
@@ -429,7 +445,7 @@ _fc_build() {
 # afterwards.
 fc_setup_makefile() {
 	unset FC_TESTLIST FC_TESTLIST_SOURCES FC_OUTPUTLIST FC_TARGETLIST \
-		FC_INSTALL FC_INSTALL_PREREQS
+		FC_INSTALL FC_INSTALL_PREREQS FC_SUBDIRS
 
 	cat > "${1}" <<_EOF_
 # generated automatically by ./configure
@@ -481,16 +497,20 @@ confclean:
 
 clean:
 	rm -f ${FC_OUTPUTLIST}
+$(_fc_setup_subdir_rules clean)
 
 distclean: clean confclean
 	rm -f Makefile ${FC_CONFIG_H}
+$(_fc_setup_subdir_rules distclean)
 
 .PHONY: all clean config confclean default distclean \
 	${FC_TARGETLIST} ${FC_INSTALL+install}
 
 all: ${FC_INSTALL_PREREQS}
+$(_fc_setup_subdir_rules all)
 
 ${FC_INSTALL+install: default${FC_INSTALL}}
+${FC_INSTALL+$(_fc_setup_subdir_rules install)}
 _EOF_
 	rm -f ${FC_CONFIG_H}
 }

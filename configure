@@ -52,6 +52,10 @@ conf_get_targets() {
 
 	fc_install '$(DOCDIR)' NEWS README
 	fc_install_exe '$(BINDIR)' ${PN}
+
+	# subdirs
+
+	fc_add_subdir tests
 }
 
 conf_check_results() {
