@@ -38,6 +38,7 @@ fi
 
 : ${FC_INSTALL_UMASK:=a+rx}
 : ${FC_INSTALL_CHMOD:=a+r}
+: ${FC_INSTALL_CHMOD_EXE:=a+rx}
 
 # PART I
 # command-line parsing
@@ -388,27 +389,34 @@ _fc_install_dir() {
 	umask ${FC_INSTALL_UMASK}; mkdir -p \"\$(DESTDIR)${1}\""
 }
 
-# Synopsis: fc_install <dest> <files>
-# Setup installing <files> into <dest>, creating parent directories if
-# necessary and making them world-readable afterwards.
-fc_install() {
-	local dest
-	dest=${1}
+# Synopsis: fc_install_chmod <mode> <dest> <files>
+fc_install_chmod() {
+	local dest mode
+	mode=${1}
+	dest=${2}
+	shift
 	shift
 
 	_fc_install_dir "${dest}"
 	FC_INSTALL="${FC_INSTALL}
 	cp ${@} \"\$(DESTDIR)${dest}\"
-	cd \"\$(DESTDIR)${dest}\" && chmod ${FC_INSTALL_CHMOD} ${@}"
+	cd \"\$(DESTDIR)${dest}\" && chmod ${mode} ${@}"
 
 	FC_INSTALL_PREREQS=${FC_INSTALL_PREREQS+${FC_INSTALL_PREREQS} }${@}
+}
+
+# Synopsis: fc_install <dest> <files>
+# Setup installing <files> into <dest>, creating parent directories if
+# necessary and making them world-readable afterwards.
+fc_install() {
+	fc_install_chmod ${FC_INSTALL_CHMOD} "${@}"
 }
 
 # Synopsis: fc_install_exe <dest> <files>
 # Setup installing <files> into <dest>, creating parent directories if
 # necessary and making them world-executable afterwards.
 fc_install_exe() {
-	FC_INSTALL_CHMOD=a+rx fc_install "${@}"
+	fc_install_chmod ${FC_INSTALL_CHMOD_EXE} "${@}"
 }
 
 # Synopsis: _fc_build [<target>]
