@@ -1,7 +1,7 @@
 #!/bin/sh
 # mirage2iso
-# (c) 2009 Michał Górny
-# released under 3-clause BSD license
+# (c) 2009/10 Michał Górny
+# Released under the terms of the 3-clause BSD license.
 
 PN=mirage2iso
 PV=0.3

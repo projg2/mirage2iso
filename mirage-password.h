@@ -1,6 +1,6 @@
 /* mirage2iso; password input support
  * (c) 2009 Michał Górny
- * released under 3-clause BSD license
+ * Released under the terms of the 3-clause BSD license.
  */
 
 #ifndef _MIRAGE_PASSWORD_H

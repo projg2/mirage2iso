@@ -1,6 +1,6 @@
 /* mirage2iso; libmirage interface
  * (c) 2009/10 Michał Górny
- * released under 3-clause BSD license
+ * Released under the terms of the 3-clause BSD license.
  */
 
 #define _ISOC99_SOURCE 1
