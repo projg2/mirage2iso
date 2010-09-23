@@ -28,8 +28,14 @@ conf_get_targets() {
 		'struct termios term; return tcgetattr(fileno(stdin), &term);'
 
 	if [ ${WITH_ASSUAN} -eq 1 ]; then
-		fc_export ASSUAN_CPPFLAGS "${ASSUAN_CPPFLAGS}"
-		fc_export ASSUAN_LIBS "${ASSUAN_LIBS}"
+		# We allow libassuan-config to fail, and fallback to '-lassuan' then.
+
+		local libs
+		libs=$(libassuan-config --libs 2>/dev/null)
+		: ${libs:=-lassuan} # fallback
+
+		fc_export ASSUAN_CPPFLAGS "$(libassuan-config --cflags 2>/dev/null)"
+		fc_export ASSUAN_LIBS "${libs}"
 
 		fc_cc_try_link assuan \
 			'#define _ISO_C99_SOURCE 1\n#include <assuan.h>' \
@@ -136,13 +142,6 @@ conf_cmdline_parsed() {
 		exit 1
 	else
 		echo 'libmirage found.'
-	fi
-
-	if [ ${WITH_ASSUAN} -eq 1 ]; then
-		# Both can fail
-		ASSUAN_CPPFLAGS=$(libassuan-config --cflags 2>/dev/null)
-		ASSUAN_LIBS=$(libassuan-config --libs 2>/dev/null)
-		: ${ASSUAN_LIBS:=-lassuan} # fallback
 	fi
 }
 
