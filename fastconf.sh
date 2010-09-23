@@ -529,7 +529,5 @@ _fc_cmdline_unset
 _fc_cmdline_parse "${@}"
 _fc_cmdline_default
 
-conf_cmdline_parsed
-
 fc_setup_makefile Makefile Makefile.in
 exit 0

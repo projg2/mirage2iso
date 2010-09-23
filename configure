@@ -9,6 +9,21 @@ PV=0.3
 FC_CONFIG_H=mirage-config.h
 
 conf_get_targets() {
+	# post command-line parsing tasks
+
+	: ${WITH_ASSUAN:=1}
+	: ${ENABLE_LFS:=1}
+
+	if ! pkg-config --exists libmirage; then
+		echo "Your pkg-config is unable to find libmirage." >&2
+		echo >&2
+		echo "To be able to build mirage2iso, you need to have both pkg-config" >&2
+		echo "and libmirage with development headers installed." >&2
+		exit 1
+	else
+		echo 'libmirage found.' >&2
+	fi
+
 	# configuration tests
 
 	fc_cc_try_link getopt \
@@ -128,21 +143,6 @@ conf_arg_parse() {
 	esac
 
 	return 0
-}
-
-conf_cmdline_parsed() {
-	: ${WITH_ASSUAN:=1}
-	: ${ENABLE_LFS:=1}
-
-	if ! pkg-config --exists libmirage; then
-		echo "Your pkg-config is unable to find libmirage." >&2
-		echo >&2
-		echo "To be able to build mirage2iso, you need to have both pkg-config" >&2
-		echo "and libmirage with development headers installed." >&2
-		exit 1
-	else
-		echo 'libmirage found.'
-	fi
 }
 
 . ./fastconf.sh
