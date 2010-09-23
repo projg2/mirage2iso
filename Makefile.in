@@ -24,13 +24,13 @@ distclean: clean
 	rm -f Makefile mirage-config.h
 	[ ! -f tests/Makefile ] || make -C tests distclean
 
-check: $(PROG) tests/Makefile
+check: default tests/Makefile
 	[ ! -f tests/Makefile ] || ( $(MAKE) -k -C tests MIRAGE2ISO=../mirage2iso all && echo 'All tests succeeded.' || ( cd tests/; echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false ) )
 
 tests/Makefile: tests/tests-list tests/tests-gen.awk
 	awk -f tests/tests-gen.awk < $< > $@
 
-install: $(PROG)
+install: default
 	umask a+rx; mkdir -p "$(DESTDIR)$(BINDIR)"
 	cp $(PROG) "$(DESTDIR)$(BINDIR)/"
 	chmod a+rx "$(DESTDIR)$(BINDIR)/$(PROG)"
