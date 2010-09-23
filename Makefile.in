@@ -2,27 +2,7 @@
 # (c) 2009 Michał Górny
 # released under 3-clause BSD license
 
-PROG = mirage2iso
-OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
-
-.PHONY: all check clean distclean install
-.SUFFIXES: .o .c
-
-all: $(PROG)
-
-$(PROG): $(PROG).c $(OBJS)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(CONF_CPPFLAGS) $(LDFLAGS) $(CONF_LDFLAGS) -o $@ $< $(OBJS) $(LIBS) $(CONF_LIBS)
-
-.c.o:
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(CONF_CPPFLAGS) -c -o $@ $<
-
-clean:
-	rm -f $(PROG) $(OBJS)
-	[ ! -f tests/Makefile ] || make -C tests clean
-
-distclean: clean
-	rm -f Makefile mirage-config.h
-	[ ! -f tests/Makefile ] || make -C tests distclean
+.PHONY: check install
 
 check: default tests/Makefile
 	[ ! -f tests/Makefile ] || ( $(MAKE) -k -C tests MIRAGE2ISO=../mirage2iso all && echo 'All tests succeeded.' || ( cd tests/; echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false ) )

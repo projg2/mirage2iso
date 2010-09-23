@@ -8,7 +8,9 @@ PV=0.3
 
 FC_CONFIG_H=mirage-config.h
 
-conf_get_tests() {
+conf_get_targets() {
+	# configuration tests
+
 	fc_cc_try_link getopt \
 		'#define _GNU_SOURCE 1\n#include <getopt.h>' \
 		'getopt_long(argc, argv, "", 0, 0); return 0;'
@@ -42,6 +44,13 @@ conf_get_tests() {
 	if [ ${ENABLE_LFS} -eq 1 ]; then
 		touch lfs-enabled
 	fi
+
+	# actual targets
+
+	fc_cc_build ${PN} 'mirage2iso.c mirage-getopt.c mirage-wrapper.c mirage-password.c' \
+		'$(CONF_CPPFLAGS)' '$(CONF_LIBS)' '$(CONF_LDFLAGS)'
+
+	fc_set_target all ${PN}
 }
 
 conf_check_results() {

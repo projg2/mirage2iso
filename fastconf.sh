@@ -222,18 +222,24 @@ _fc_cc_mkrule_code() {
 		"${1}" '\nint main(int argc, char *argv[])' '\n' "${2}" "${3}"
 }
 
-# Synopsis: _fc_mkcall_link <infiles> [<cppflags>] [<libs>]
+# Synopsis: _fc_mkcall_compile <infiles> [<cppflags>]
+_fc_cc_mkcall_compile() {
+	printf '\t%s %s %s %s\n' \
+		'$(CC) -c $(CFLAGS) $(CPPFLAGS)' "${2}" \
+		'-o $@' "${1}"
+}
+# Synopsis: _fc_mkcall_link <infiles> [<cppflags>] [<libs>] [<ldflags>]
 _fc_cc_mkcall_link() {
-	printf '\t%s %s %s %s %s %s\n' \
-		'$(CC) $(CFLAGS) $(CPPFLAGS)' "${2}" \
+	printf '\t%s %s %s %s %s %s %s\n' \
+		'$(CC) $(CFLAGS) $(CPPFLAGS)' "${2}" "${4}" \
 		'$(LDFLAGS) -o $@' "${1}" \
 		'$(LIBS)' "${3}"
 }
 
-# Synopsis: _fc_mkrule_compile_and_link <name> [<cppflags>] [<libs>]
+# Synopsis: _fc_mkrule_compile_and_link <name> [<cppflags>] [<libs>] [<ldflags>]
 _fc_cc_mkrule_compile_and_link() {
 	printf "%s: %s.c\n" "${1}" "${1}"
-	_fc_cc_mkcall_link '$<' "${2}" "${3}"
+	_fc_cc_mkcall_link '$<' "${2}" "${3}" "${4}"
 }
 
 # Synopsis: _fc_append_test <name>
@@ -246,13 +252,13 @@ _fc_append_source() {
 	FC_TESTLIST_SOURCES=${FC_TESTLIST_SOURCES+${FC_TESTLIST_SOURCES} }${1}
 }
 
-# Synopsis: fc_cc_try_link <name> <includes> <code> [<cppflags>] [<libs>]
+# Synopsis: fc_cc_try_link <name> <includes> <code> [<cppflags>] [<libs>] [<ldflags>]
 # Output a Makefile rule trying to link a test program <name>, passing
-# <cppflags> and <libs> to the compiler. For the description of
-# <includes> and <code> see _fc_mkrule_code().
+# <cppflags>, <ldflags> and <libs> to the compiler. For the description
+# of <includes> and <code> see _fc_mkrule_code().
 fc_cc_try_link() {
 	_fc_cc_mkrule_code "check-${1}" "${2}" "${3}"
-	_fc_cc_mkrule_compile_and_link "check-${1}" "${4}" "${5}"
+	_fc_cc_mkrule_compile_and_link "check-${1}" "${4}" "${5}" "${6}"
 	echo
 
 	_fc_append_test "check-${1}"
@@ -304,12 +310,67 @@ _fc_create_config() {
 
 # Synopsis: fc_export <name> <value>
 # Write a variable/macro export for make. Can be used within
-# conf_get_tests()._
+# conf_get_targets() and conf_get_exports().
 fc_export() {
 	echo "${1}=${2}"
 }
 
-# Synopsis: fc_build [<target>]
+# Synopsis: _fc_append_output <name>
+_fc_append_output() {
+	FC_OUTPUTLIST=${FC_OUTPUTLIST+${FC_OUTPUTLIST} }${1}
+}
+
+# Synopsis: fc_cc_compile <src> [<cppflags>]
+# Output a Makefile rule ompiling a single source file <src> into object
+# <src%.*>.o, passing <cppflags> to the compiler.
+fc_cc_compile() {
+	local out
+	out=${1%.*}.o
+
+	echo "${out}: ${1}"
+	_fc_cc_mkcall_compile '$<' "${2}"
+	echo
+
+	_fc_append_output "${out}"
+}
+
+# Synopsis: fc_cc_link <prog> <objects> [<cppflags>] [<libs>] [<ldflags>]
+# Output a Makefile rule linking the <prog> executable from <objects>
+# object list (whitespace-delimitered), passing <cppflags>, <ldflags>
+# and <libs> to the compiler.
+fc_cc_link() {
+	echo "${1}: ${2}"
+	_fc_cc_mkcall_link "${2}" "${3}" "${4}" "${5}"
+	echo
+
+	_fc_append_output "${1}"
+}
+
+# Synopsis: fc_cc_build <prog> <sources> [<cppflags>] [<libs>] [<ldflags>]
+# Output Makefile rules compiling <sources> into object files, and then
+# linking them together as <prog>. <cppflags>, <ldflags> and <libs> will
+# be passed to the compiler as appropriate.
+fc_cc_build() {
+	local f outf
+	unset outf
+
+	for f in ${2}; do
+		fc_cc_compile ${f} "${3}"
+		outf=${outf+${outf} }${f%.*}.o
+	done
+	fc_cc_link "${1}" "${outf}" "${3}" "${4}" "${5}"
+}
+
+# Synopsis: fc_set_target <target> <prereqs>
+# Output a simple make target <target>, setting its prerequisities to
+# <prereqs>.
+fc_set_target() {
+	echo "${1}: ${2}"
+
+	FC_TARGETLIST=${FC_TARGETLIST+${FC_TARGETLIST} }${1}
+}
+
+# Synopsis: _fc_build [<target>]
 # Call make to build target <target> (or the default one if no target is
 # passed), passing the necessary defines to make.
 _fc_build() {
@@ -324,11 +385,16 @@ _fc_build() {
 	make "${@}"
 }
 
+# Callback: conf_get_targets
+# Called by fc_setup_makefile() in order to get the complete target list
+# for the Makefile. This should output targets for both the configure
+# and build phases.
+
 # Synopsis: fc_setup_makefile <out> <in>
 # Create an actual Makefile in file <out>, appending the file <in>
 # afterwards.
 fc_setup_makefile() {
-	unset FC_TESTLIST FC_TESTLIST_SOURCES
+	unset FC_TESTLIST FC_TESTLIST_SOURCES FC_OUTPUTLIST FC_TARGETLIST
 
 	cat > "${1}" <<_EOF_
 # generated automatically by ./configure
@@ -353,15 +419,13 @@ MANDIR = ${MANDIR}
 DOCDIR = ${DOCDIR}
 HTMLDIR = ${HTMLDIR}
 
-.PHONY: config confclean default
-
 default: ${FC_CONFIG_H}
 	@+if [ -n "\$(FC_EXPORTED)" ]; then \$(MAKE) all; else ./configure --build=all; fi
 	@+\$(MAKE) confclean
 
 _EOF_
 
-	conf_get_tests >> "${1}"
+	conf_get_targets >> "${1}"
 
 	cat - "${2}" >> "${1}" <<_EOF_
 
@@ -380,6 +444,14 @@ ${FC_CONFIG_H}:
 confclean:
 	@rm -f ${FC_TESTLIST} ${FC_TESTLIST_SOURCES}
 
+clean:
+	rm -f ${FC_OUTPUTLIST}
+
+distclean: clean confclean
+	rm -f Makefile ${FC_CONFIG_H}
+
+.PHONY: clean config confclean default distclean \
+	${FC_TARGETLIST}
 _EOF_
 	rm -f ${FC_CONFIG_H}
 }
