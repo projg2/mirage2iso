@@ -115,6 +115,10 @@ _fc_cmdline_parse() {
 				_fc_create_config "${1#--create-config=}"
 				exit 0
 				;;
+			--build=*)
+				_fc_build "${1#--build=}"
+				exit ${?}
+				;;
 			--prefix=*)
 				PREFIX=${1#--prefix=}
 				;;
@@ -305,6 +309,21 @@ fc_export() {
 	echo "${1}=${2}"
 }
 
+# Synopsis: fc_build [<target>]
+# Call make to build target <target> (or the default one if no target is
+# passed), passing the necessary defines to make.
+_fc_build() {
+	local ifs_save
+	ifs_save=${IFS}
+	IFS='
+'
+	set -- "${1}" $(conf_get_exports)
+	IFS=${ifs_save}
+
+	echo make "${@}" >&2
+	make "${@}"
+}
+
 # Synopsis: fc_setup_makefile <out> <in>
 # Create an actual Makefile in file <out>, appending the file <in>
 # afterwards.
@@ -337,7 +356,8 @@ HTMLDIR = ${HTMLDIR}
 .PHONY: config confclean default
 
 default: ${FC_CONFIG_H}
-	+\$(MAKE) all
+	@+if [ -n "\$(FC_EXPORTED)" ]; then \$(MAKE) all; else ./configure --build=all; fi
+	@+\$(MAKE) confclean
 
 _EOF_
 
@@ -348,13 +368,13 @@ _EOF_
 config:
 	@rm -f ${FC_CONFIG_H}
 	@+\$(MAKE) ${FC_CONFIG_H}
+	@+\$(MAKE) confclean
 
 ${FC_CONFIG_H}:
 	@echo "** MAKE CONFIG STARTING **" >&2
 	@+\$(MAKE) confclean
 	-+\$(MAKE) -k ${FC_TESTLIST}
 	./configure --create-config=\$@
-	@+\$(MAKE) confclean
 	@echo "** MAKE CONFIG FINISHED **" >&2
 
 confclean:
