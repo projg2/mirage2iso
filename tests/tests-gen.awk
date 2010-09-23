@@ -5,7 +5,7 @@ BEGIN {
 	print "INPUT = 00_input.iso"
 	print "SECOND = 00_second.iso"
 	print
-	print "all: tests"
+	print "all:"
 	print "preclean:"
 	print "	rm -f tests-failed"
 

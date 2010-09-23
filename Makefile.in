@@ -1,7 +1,7 @@
 .PHONY: check
 
 check: default tests/Makefile
-	[ ! -f tests/Makefile ] || { cd tests; $(MAKE) -k MIRAGE2ISO=../mirage2iso all && echo 'All tests succeeded.' || { echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false; }; }
+	[ ! -f tests/Makefile ] || { cd tests; $(MAKE) -k MIRAGE2ISO=../mirage2iso tests && echo 'All tests succeeded.' || { echo; echo "$$(wc -l < tests-failed) of $$(wc -l < tests-list) tests failed. Failed tests are:"; cat tests-failed; echo; false; }; }
 
 tests/Makefile: tests/tests-list tests/tests-gen.awk
 	awk -f tests/tests-gen.awk < $< > $@
