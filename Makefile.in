@@ -5,9 +5,7 @@
 PROG = mirage2iso
 OBJS = mirage-getopt.o mirage-wrapper.o mirage-password.o
 
-DESTDIR = 
-
-.PHONY: all clean distclean check install
+.PHONY: all check clean distclean install
 .SUFFIXES: .o .c
 
 all: $(PROG)

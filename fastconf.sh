@@ -32,6 +32,10 @@ else
 	PACKAGE=${PN}-${PV}
 fi
 
+# You can use FC_CONFIG_H to override the default config header file
+# name.
+: ${FC_CONFIG_H:=config.h}
+
 # PART I
 # command-line parsing
 
@@ -107,6 +111,10 @@ _EOF_
 _fc_cmdline_parse() {
 	while [ ${#} -gt 0 ]; do
 		case "${1}" in
+			--create-config=*)
+				_fc_create_config "${1#--create-config=}"
+				exit 0
+				;;
 			--prefix=*)
 				PREFIX=${1#--prefix=}
 				;;
@@ -247,30 +255,6 @@ fc_try_link() {
 	_fc_append_source "check-${1}.c"
 }
 
-fc_setup_makefile() {
-	unset FC_TESTLIST FC_TESTLIST_SOURCES
-
-	echo '# generated automatically by ./configure' > "${1}"
-	echo '# please modify ./configure or Makefile.in instead' >> "${1}"
-	echo >> "${1}"
-
-	conf_get_tests >> "${1}"
-
-	cat - "${2}" >> "${1}" <<_EOF_
-.PHONY: config confclean
-
-config:
-	@echo "** MAKE CONFIG STARTING **" >&2
-	@+\$(MAKE) confclean
-	-+\$(MAKE) -k ${FC_TESTLIST}
-	#@+\$(MAKE) confclean
-	@echo "** MAKE CONFIG FINISHED **" >&2
-
-confclean:
-	@rm -f ${FC_TESTLIST} ${FC_TESTLIST_SOURCES}
-_EOF_
-}
-
 # Synopsis: fc_def <name> [<val>]
 # Output '#define <name> <val>'.
 fc_def() {
@@ -282,27 +266,102 @@ fc_def() {
 # or false. If <desc> is provided, print either "<desc> found"
 # or "<desc> unavailable."
 fc_check() {
-	local testname testdesc
-	testname=check-${1}
-	testdesc=${2}
+	if [ -f "check-${1}" ]; then
+		[ -n "${2}" ] && echo "${2} found." >&2
+		return 0
+	else
+		[ -n "${2}" ] && echo "${2} unavailable." >&2
+		return 1
+	fi
+}
 
-	set -- ${FC_TESTLIST}
-	while [ ${#} -ge 1 ]; do
-		if [ "${1}" = "${testname}" ]; then
-			if [ -f "${1}" ]; then
-				[ -n "${testdesc}" ] && echo "${testdesc} found." >&2
-				return 0
-			else
-				[ -n "${testdesc}" ] && echo "${testdesc} unavailable." >&2
-				return 1
-			fi
-		fi
+# Callback: conf_check_results
+# Called when './configure --create-config=*' is called. Should check
+# the configure results (using fc_check) and define the appropriate
+# macros for config.h file (using fc_def).
 
-		shift
-	done
+# Callback: conf_get_exports
+# Called by './configure --create-config' and './configure --build'.
+# Should check the configure results and export necessary macros for
+# make (using fc_export).
 
-	[ -n "${testdesc}" ] && echo "${testdesc} explicitly disabled." >&2
-	return 2
+# Synopsis: _fc_create_config <config-file>
+# Call conf_check_results() to get the config.h file contents and write
+# them into <config-file>. Afterwards, call conf_get_exports() to get
+# the necessary make macros and append them to Makefile.
+_fc_create_config() {
+	conf_check_results > "${1}"
+	fc_export FC_EXPORTED 1 >> Makefile
+	conf_get_exports >> Makefile
+}
+
+# PART III
+# Makefile generation
+
+# Synopsis: fc_export <name> <value>
+# Write a variable/macro export for make. Can be used within
+# conf_get_tests()._
+fc_export() {
+	echo "${1}=${2}"
+}
+
+# Synopsis: fc_setup_makefile <out> <in>
+# Create an actual Makefile in file <out>, appending the file <in>
+# afterwards.
+fc_setup_makefile() {
+	unset FC_TESTLIST FC_TESTLIST_SOURCES
+
+	cat > "${1}" <<_EOF_
+# generated automatically by ./configure
+# please modify ./configure or Makefile.in instead
+
+DESTDIR =
+
+PREFIX = ${PREFIX}
+EXEC_PREFIX = ${EXEC_PREFIX}
+
+BINDIR = ${BINDIR}
+SBINDIR = ${SBINDIR}
+LIBEXECDIR = ${LIBEXECDIR}
+SYSCONFDIR = ${SYSCONFDIR}
+LOCALSTATEDIR = ${LOCALSTATEDIR}
+LIBDIR = ${LIBDIR}
+INCLUDEDIR = ${INCLUDEDIR}
+DATAROOTDIR = ${DATAROOTDIR}
+DATADIR = ${DATADIR}
+LOCALEDIR = ${LOCALEDIR}
+MANDIR = ${MANDIR}
+DOCDIR = ${DOCDIR}
+HTMLDIR = ${HTMLDIR}
+
+.PHONY: config confclean default
+
+default: ${FC_CONFIG_H}
+	+\$(MAKE) all
+
+_EOF_
+
+	conf_get_tests >> "${1}"
+
+	cat - "${2}" >> "${1}" <<_EOF_
+
+config:
+	@rm -f ${FC_CONFIG_H}
+	@+\$(MAKE) ${FC_CONFIG_H}
+
+${FC_CONFIG_H}:
+	@echo "** MAKE CONFIG STARTING **" >&2
+	@+\$(MAKE) confclean
+	-+\$(MAKE) -k ${FC_TESTLIST}
+	./configure --create-config=\$@
+	@+\$(MAKE) confclean
+	@echo "** MAKE CONFIG FINISHED **" >&2
+
+confclean:
+	@rm -f ${FC_TESTLIST} ${FC_TESTLIST_SOURCES}
+
+_EOF_
+	rm -f ${FC_CONFIG_H}
 }
 
 # INITIALIZATION RULES
@@ -314,3 +373,4 @@ _fc_cmdline_default
 conf_cmdline_parsed
 
 fc_setup_makefile Makefile Makefile.in
+exit 0
