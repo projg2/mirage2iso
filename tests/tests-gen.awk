@@ -34,5 +34,6 @@ END {
 	print "	rm -f " all
 	print "distclean: clean"
 	print "	rm -f Makefile"
-	print ".PHONY: all tests clean distclean"
+	print "install:"
+	print ".PHONY: all tests clean distclean install"
 }
