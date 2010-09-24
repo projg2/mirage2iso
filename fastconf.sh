@@ -177,7 +177,7 @@ _fc_cmdline_parse() {
 				;;
 			*)
 				# XXX: support argument shifting in conf_arg_parse()
-				if ! conf_arg_parse "${@}"; then
+				if conf_arg_parse "${@}"; then
 					# autoconf lists more than a single option here if applicable
 					# but it's easier for us to print them one-by-one
 					# and we keep the form to satisfy portage's QA checks
