@@ -5,12 +5,19 @@
 
 PN=mirage2iso
 PV=0.3
+FC_API_WANT=0
 
 FC_CONFIG_H=mirage-config.h
 FC_MAKEFILE_IN=Makefile.in
 
 conf_init() {
 	fc_inherit cc
+	fc_export_functions \
+		conf_get_targets \
+		conf_check_results \
+		conf_get_exports \
+		conf_help \
+		conf_arg_parse
 }
 
 conf_get_targets() {
