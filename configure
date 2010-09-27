@@ -11,7 +11,7 @@ FC_CONFIG_H=mirage-config.h
 FC_MAKEFILE_IN=Makefile.in
 
 conf_init() {
-	fc_inherit cc
+	fc_inherit cc install
 	fc_export_functions \
 		conf_get_targets \
 		conf_check_results \
