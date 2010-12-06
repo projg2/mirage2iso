@@ -38,34 +38,17 @@
 #	define EX_IOERR 74
 #endif
 
-#include "mirage-getopt.h"
+#include <glib.h>
+
 #include "mirage-password.h"
 #include "mirage-wrapper.h"
 
-bool quiet = false;
-bool verbose = false;
+gboolean quiet = false;
+gboolean verbose = false;
 
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-static bool force_stdio = false;
+static gboolean force_stdio = false;
 #endif
-
-static const struct mirage_opt opts[] = {
-	{ "force", mirage_arg_none, 'f', "Force replacing guessed output file" },
-	{ "help", mirage_arg_none, '?', "Take a wild guess" },
-	{ "password", mirage_arg_str, 'p', "Password for the encrypted image" },
-	{ "quiet", mirage_arg_none, 'q', "Disable progress reporting, output only errors" },
-	{ "session", mirage_arg_int, 's', "Session to use (default: last one)" },
-	{ "stdio", mirage_arg_none, 'S', "Force using stdio instead of mmap()" },
-	{ "stdout", mirage_arg_none, 'c', "Output image into STDOUT instead of a file" },
-	{ "verbose", mirage_arg_none, 'v', "Increase progress reporting verbosity" },
-	{ "version", mirage_arg_none, 'V', "Print version number and quit" },
-	{ 0, 0, 0, 0 }
-};
-
-static int help(const char* argv0) {
-	mirage_getopt_help(*argv0 ? argv0 : "mirage2iso", "[options] <infile> [outfile.iso]", opts);
-	return EX_USAGE;
-}
 
 static void version(const bool mirage) {
 	const char* const ver = mirage ? miragewrap_get_version() : NULL;
@@ -213,48 +196,37 @@ static int output_track(const char* const fn, const int track_num) {
 	return EX_OK;
 }
 
-int main(const int argc, char* const argv[]) {
-	int session_num = -1;
-	bool force = false;
-	bool use_stdout = false;
+int main(int argc, char* argv[]) {
+	gint session_num = -1;
+	gboolean force = false;
+	gboolean use_stdout = false;
+	gchar **newargv = NULL;
 
-	int arg;
-	union mirage_optarg_val val;
-	const char* newargv[argc];
-
-	while ((arg = mirage_getopt(argc, argv, opts, &val, newargv)) > 0) {
-		switch (arg) {
-			case 'c':
-				use_stdout = true;
-				break;
-			case 'f':
-				force = true;
-				break;
-			case 'p':
-				mirage_set_password(val.as_str);
-				break;
-			case 'q':
-				quiet = true;
-				break;
-			case 's':
-				session_num = val.as_int;
-				break;
-			case 'S':
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-				force_stdio = true;
-#else
-				fprintf(stderr, "mirage2iso compiled without mmap support, --stdio is always on\n");
+	const GOptionEntry opts[] = {
+		{ "force", 'f', 0, G_OPTION_ARG_NONE, &force, "Force replacing the guessed output file", NULL },
+#if 0 /* XXX: mirage_set_password()? */
+		{ "password", 'p', 0, G_OPTION_ARG_STRING, XXX, "Password for the encrypted image", "PASS" },
 #endif
-				break;
-			case 'v':
-				verbose = true;
-				break;
-			case 'V':
-				version(miragewrap_init());
-				return EX_OK;
-			case '?':
-				return help(argv[0]);
-		}
+		{ "quiet", 'q', 0, G_OPTION_ARG_NONE, &quiet, "Disable progress reporting, output only errors", NULL },
+		{ "session", 's', 0, G_OPTION_ARG_INT, &session_num, "Session to use (default: the last one)", "N" },
+		{ "stdio", 'S', 0, G_OPTION_ARG_NONE, &force_stdio, "Force using stdio instead of mmap()", NULL },
+		{ "stdout", 'c', 0, G_OPTION_ARG_NONE, &use_stdout, "Output the image into stdout instead of a file", NULL },
+		{ "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Increase progress reporting verbosity", NULL },
+		{ G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &newargv, NULL, "<in> [<out.iso>]" },
+		{ NULL }
+	};
+	GOptionContext *opt;
+	GError *err = NULL;
+
+	opt = g_option_context_new(NULL);
+	g_option_context_add_main_entries(opt, opts, NULL);
+
+	if (!g_option_context_parse(opt, &argc, &argv, &err)) {
+		g_print("Option parsing failed: %s\n", err->message);
+		g_error_free(err);
+		g_option_context_free(opt);
+		g_strfreev(newargv);
+		return EX_USAGE;
 	}
 
 	if (quiet && verbose) {
@@ -273,11 +245,17 @@ int main(const int argc, char* const argv[]) {
 			fprintf(stderr, "--force has no effect when --stdout in use\n");
 	}
 
-	const char* const in = newargv[0];
-	if (!in) {
+	const char* in;
+	if (!newargv || !(in = newargv[0])) {
+		gchar* const helpmsg = g_option_context_get_help(opt, TRUE, NULL);
 		fprintf(stderr, "No input file specified\n");
-		return help(argv[0]);
+		g_print("%s", helpmsg);
+		g_free(helpmsg);
+		g_option_context_free(opt);
+		g_strfreev(newargv);
+		return EX_USAGE;
 	}
+	g_option_context_free(opt);
 
 	const char* out = newargv[1];
 	char* outbuf = NULL;
@@ -289,6 +267,7 @@ int main(const int argc, char* const argv[]) {
 				if (!force) {
 					fprintf(stderr, "Input file has .iso suffix and no output file specified\n"
 							"Either specify one or use --force to use '.iso.iso' output suffix\n");
+					g_strfreev(newargv);
 					return EX_USAGE;
 				}
 				ext = NULL;
@@ -299,6 +278,7 @@ int main(const int argc, char* const argv[]) {
 			outbuf = malloc(namelen + 5);
 			if (!outbuf) {
 				perror("malloc() for output filename failed");
+				g_strfreev(newargv);
 				return EX_OSERR;
 			}
 			strncpy(outbuf, in, namelen);
@@ -312,6 +292,7 @@ int main(const int argc, char* const argv[]) {
 
 					fprintf(stderr, "No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
 					free(outbuf);
+					g_strfreev(newargv);
 					return EX_USAGE;
 				}
 			}
@@ -320,17 +301,21 @@ int main(const int argc, char* const argv[]) {
 		}
 	} else if (use_stdout) {
 		fprintf(stderr, "Output file can't be specified with --stdout\n");
+		g_strfreev(newargv);
 		return EX_USAGE;
 	}
 
-	if (!miragewrap_init())
+	if (!miragewrap_init()) {
+		g_strfreev(newargv);
 		return EX_SOFTWARE;
+	}
 
 	if (verbose)
 		version(true);
 
 	if (!miragewrap_open(in, session_num)) {
 		miragewrap_free();
+		g_strfreev(newargv);
 		return EX_NOINPUT;
 	}
 	if (verbose)
@@ -346,6 +331,7 @@ int main(const int argc, char* const argv[]) {
 
 		if (ret != EX_OK && ret != EX_DATAERR) {
 			miragewrap_free();
+			g_strfreev(newargv);
 			return ret;
 		}
 	}
@@ -359,5 +345,6 @@ int main(const int argc, char* const argv[]) {
 		fprintf(stderr, "Done\n");
 
 	miragewrap_free();
+	g_strfreev(newargv);
 	return EX_OK;
 }
