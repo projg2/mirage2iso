@@ -79,13 +79,13 @@ static const char* mirage_getshell(void) {
 typedef gpg_error_t assuan_error_t;
 const assuan_error_t ASSUAN_No_Error = GPG_ERR_NO_ERROR;
 
-inline const char* assuan_strerror(assuan_error_t err) {
+const char* assuan_strerror(assuan_error_t err) {
 	return gpg_strerror(err);
 }
 
 #else
 
-inline assuan_error_t assuan_release(const assuan_context_t ctx) {
+assuan_error_t assuan_release(const assuan_context_t ctx) {
 	assuan_disconnect(ctx);
 	return 0;
 }
