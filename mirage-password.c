@@ -3,12 +3,8 @@
  * Released under the terms of the 3-clause BSD license.
  */
 
-#include "mirage-config.h"
-
-#ifndef NO_TERMIOS
-#	define _POSIX_C_SOURCE 200112L
-#else
-#	define _ISOC99_SOURCE 1
+#ifdef HAVE_CONFIG_H
+#	include "mirage-config.h"
 #endif
 
 #include <stdlib.h>
@@ -16,14 +12,14 @@
 #include <stdbool.h>
 #include <string.h>
 
-#ifndef NO_TERMIOS
+#ifdef HAVE_TERMIOS
 #	include <termios.h>
 #	include <unistd.h>
 #endif
 
-#ifndef NO_ASSUAN
+#ifdef HAVE_LIBASSUAN
 #	include <stddef.h>
-#	ifndef NO_ASSUAN2
+#	ifdef HAVE_LIBASSUAN2
 #		include <gpg-error.h>
 #	endif
 #	include <assuan.h>
@@ -65,7 +61,7 @@ static bool mirage_allocbuf(const int size) {
 	return true;
 }
 
-#ifndef NO_ASSUAN
+#ifdef HAVE_LIBASSUAN
 
 /* XXX: more portable solution? */
 static const char* mirage_getshell(void) {
@@ -77,7 +73,7 @@ static const char* mirage_getshell(void) {
 	return "/bin/sh";
 }
 
-#ifndef NO_ASSUAN2
+#ifdef HAVE_LIBASSUAN2
 /* this should be less risky than redefining gpg_* for assuan1 */
 
 typedef gpg_error_t assuan_error_t;
@@ -128,7 +124,7 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 	assuan_context_t ctx;
 	assuan_error_t err;
 
-#ifndef NO_ASSUAN2
+#ifdef HAVE_LIBASSUAN2
 	if (((err = assuan_new(&ctx))) != GPG_ERR_NO_ERROR) {
 		fprintf(stderr, "Failed to initialize libassuan: %s\n", assuan_strerror(err));
 		return error;
@@ -205,7 +201,7 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 #endif
 
 static bool mirage_echo(const bool newstate) {
-#ifndef NO_TERMIOS
+#ifdef HAVE_TERMIOS
 	const int fd = fileno(stdin);
 	struct termios term;
 
@@ -276,7 +272,7 @@ const char* mirage_input_password(void) {
 	if (buf) /* password already there */
 		return buf;
 
-#ifndef NO_ASSUAN
+#ifdef HAVE_LIBASSUAN
 	switch (mirage_input_password_pinentry()) {
 		case error: break;
 		case success: return buf;

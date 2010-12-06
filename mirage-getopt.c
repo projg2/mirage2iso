@@ -3,14 +3,13 @@
  * Released under the terms of the 3-clause BSD license.
  */
 
-#include "mirage-config.h"
+#ifdef HAVE_CONFIG_H
+#	include "mirage-config.h"
+#endif
 #include "mirage-getopt.h"
 
-#ifndef NO_GETOPT_LONG
-#	define _GNU_SOURCE 1
+#ifdef HAVE_GETOPT_LONG
 #	include <getopt.h>
-#else
-#	define _ISOC99_SOURCE 1
 #endif
 
 #include <stdlib.h>
@@ -33,7 +32,7 @@ static bool try_atoi(const char* const val, int* const out) {
 	return true;
 }
 
-#ifndef NO_GETOPT_LONG
+#ifdef HAVE_GETOPT_LONG
 
 short int mirage_getopt(const int argc, char* const argv[], const struct mirage_opt* const opts, union mirage_optarg_val *outval, const char* newargv[]) {
 	const struct mirage_opt *op;

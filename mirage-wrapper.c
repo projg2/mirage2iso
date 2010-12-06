@@ -3,7 +3,9 @@
  * Released under the terms of the 3-clause BSD license.
  */
 
-#define _ISOC99_SOURCE 1
+#ifdef HAVE_CONFIG_H
+#	include "mirage-config.h"
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>

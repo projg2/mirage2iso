@@ -3,12 +3,8 @@
  * Released under the terms of the 3-clause BSD license.
  */
 
-#include "mirage-config.h"
-
-#if !defined(NO_MMAPIO) || !defined(NO_FTRUNCATE)
-#	define _POSIX_C_SOURCE 200112L
-#else
-#	define _ISOC99_SOURCE 1
+#ifdef HAVE_CONFIG_H
+#	include "mirage-config.h"
 #endif
 
 #include <stdlib.h>
@@ -17,14 +13,14 @@
 #include <string.h>
 #include <errno.h>
 
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 #	include <sys/types.h>
 #	include <sys/stat.h>
 #	include <sys/mman.h>
 #	include <fcntl.h>
 #	include <unistd.h>
 #else
-#	ifndef NO_FALLOCATE
+#	ifdef HAVE_FALLOCATE
 #		include <fcntl.h>
 #	endif
 #endif
@@ -49,11 +45,9 @@
 bool quiet = false;
 bool verbose = false;
 
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 static bool force_stdio = false;
 #endif
-
-static const char* const VERSION = "0.3";
 
 static const struct mirage_opt opts[] = {
 	{ "force", mirage_arg_none, 'f', "Force replacing guessed output file" },
@@ -84,7 +78,7 @@ static bool common_posix_filesetup(const int fd, const size_t size) {
 		perror("posix_fadvise() failed");
 #endif
 
-#ifndef NO_FALLOCATE
+#ifdef HAVE_POSIX_FALLOCATE
 	if ((errno = posix_fallocate(fd, 0, size))) {
 		perror("posix_fallocate() failed");
 
@@ -104,7 +98,7 @@ static bool common_posix_filesetup(const int fd, const size_t size) {
 	return true;
 }
 
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 static int mmapio_open(const char* const fn, const size_t size, FILE** const f, void** const out) {
 	*f = fopen(fn, "w+b");
 	if (!*f) {
@@ -147,7 +141,7 @@ static int stdio_open(const char* const fn, const size_t size, FILE** const f) {
 		return EX_CANTCREAT;
 	}
 
-#if !defined(NO_MMAPIO) || !defined(NO_FALLOCATE)
+#if (defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)) || defined(HAVE_POSIX_FALLOCATE)
 	if (!common_posix_filesetup(fileno(*f), size))
 		return EX_CANTCREAT;
 #endif
@@ -172,7 +166,7 @@ static int output_track(const char* const fn, const int track_num) {
 		if (verbose)
 			fprintf(stderr, "Using standard output stream for track %d\n", track_num);
 	} else {
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (!force_stdio)
 			ret = mmapio_open(fn, size, &f, &out);
 #endif
@@ -197,7 +191,7 @@ static int output_track(const char* const fn, const int track_num) {
 	}
 
 	if (!miragewrap_output_track(out, track_num, f)) {
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (out && munmap(out, size))
 			perror("munmap() failed");
 #endif
@@ -206,7 +200,7 @@ static int output_track(const char* const fn, const int track_num) {
 		return EX_IOERR;
 	}
 
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 	if (out && munmap(out, size))
 		perror("munmap() failed");
 #endif
@@ -246,7 +240,7 @@ int main(const int argc, char* const argv[]) {
 				session_num = val.as_int;
 				break;
 			case 'S':
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 				force_stdio = true;
 #else
 				fprintf(stderr, "mirage2iso compiled without mmap support, --stdio is always on\n");
@@ -269,7 +263,7 @@ int main(const int argc, char* const argv[]) {
 	}
 
 	if (use_stdout) {
-#ifndef NO_MMAPIO
+#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (force_stdio && !quiet)
 			fprintf(stderr, "--stdout already implies --stdio, no need to specify it\n");
 		else
