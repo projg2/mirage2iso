@@ -200,6 +200,7 @@ int main(int argc, char* argv[]) {
 	gint session_num = -1;
 	gboolean force = false;
 	gboolean use_stdout = false;
+	gboolean want_version = false;
 	gchar **newargv = NULL;
 	gchar *passbuf = NULL;
 
@@ -211,6 +212,7 @@ int main(int argc, char* argv[]) {
 		{ "stdio", 'S', 0, G_OPTION_ARG_NONE, &force_stdio, "Force using stdio instead of mmap()", NULL },
 		{ "stdout", 'c', 0, G_OPTION_ARG_NONE, &use_stdout, "Output the image into stdout instead of a file", NULL },
 		{ "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Increase progress reporting verbosity", NULL },
+		{ "version", 'V', 0, G_OPTION_ARG_NONE, &want_version, "Print program version and exit", NULL },
 		{ G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &newargv, NULL, "<in> [<out.iso>]" },
 		{ NULL }
 	};
@@ -227,6 +229,14 @@ int main(int argc, char* argv[]) {
 		g_free(passbuf);
 		g_strfreev(newargv);
 		return EX_USAGE;
+	}
+
+	if (want_version) {
+		g_option_context_free(opt);
+		g_free(passbuf);
+		g_strfreev(newargv);
+		version(true);
+		return EX_OK;
 	}
 
 	if (quiet && verbose) {
