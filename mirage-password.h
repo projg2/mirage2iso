@@ -10,6 +10,6 @@
 
 const gchar* mirage_input_password(void);
 void mirage_forget_password(void);
-gboolean mirage_set_password(const gchar* const pass);
+void mirage_set_password(const gchar* const pass);
 
 #endif

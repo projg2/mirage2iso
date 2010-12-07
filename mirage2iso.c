@@ -254,10 +254,8 @@ int main(int argc, char* argv[]) {
 			g_printerr("--force has no effect when --stdout in use\n");
 	}
 
-	if (passbuf) {
+	if (passbuf)
 		mirage_set_password(passbuf);
-		g_free(passbuf);
-	}
 
 	const gchar* in;
 	if (!newargv || !(in = newargv[0])) {
@@ -266,6 +264,7 @@ int main(int argc, char* argv[]) {
 		g_free(helpmsg);
 		g_option_context_free(opt);
 		g_strfreev(newargv);
+		mirage_forget_password();
 		return EX_USAGE;
 	}
 	g_option_context_free(opt);
@@ -281,6 +280,7 @@ int main(int argc, char* argv[]) {
 					g_printerr("Input file has .iso suffix and no output file specified\n"
 							"Either specify one or use --force to use '.iso.iso' output suffix\n");
 					g_strfreev(newargv);
+					mirage_forget_password();
 					return EX_USAGE;
 				}
 				ext = NULL;
@@ -296,6 +296,7 @@ int main(int argc, char* argv[]) {
 					g_printerr("No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
 					g_free(outbuf);
 					g_strfreev(newargv);
+					mirage_forget_password();
 					return EX_USAGE;
 				}
 			}
@@ -305,11 +306,13 @@ int main(int argc, char* argv[]) {
 	} else if (use_stdout) {
 		g_printerr("Output file can't be specified with --stdout\n");
 		g_strfreev(newargv);
+		mirage_forget_password();
 		return EX_USAGE;
 	}
 
 	if (!miragewrap_init()) {
 		g_strfreev(newargv);
+		mirage_forget_password();
 		return EX_SOFTWARE;
 	}
 
@@ -319,6 +322,7 @@ int main(int argc, char* argv[]) {
 	if (!miragewrap_open(in, session_num)) {
 		miragewrap_free();
 		g_strfreev(newargv);
+		mirage_forget_password();
 		return EX_NOINPUT;
 	}
 	if (verbose)
@@ -335,6 +339,7 @@ int main(int argc, char* argv[]) {
 		if (ret != EX_OK && ret != EX_DATAERR) {
 			miragewrap_free();
 			g_strfreev(newargv);
+			mirage_forget_password();
 			return ret;
 		}
 	}
@@ -347,5 +352,6 @@ int main(int argc, char* argv[]) {
 
 	miragewrap_free();
 	g_strfreev(newargv);
+	mirage_forget_password();
 	return EX_OK;
 }

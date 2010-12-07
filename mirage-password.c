@@ -27,10 +27,6 @@
 #	include <assuan.h>
 #endif
 
-static const gint password_bufsize = 256;
-
-static gchar *buf = NULL;
-
 /* We use this ternary state like that:
  * - error means that something terrible has happened (I/O failure etc),
  * - success means requested operation succedeed,
@@ -44,18 +40,20 @@ typedef enum mirage_tristate {
 	failure
 } mirage_tristate_t;
 
+static gchar *mirage_current_password = NULL;
+
 void mirage_forget_password(void) {
-	if (buf) {
+	if (mirage_current_password) {
 		/* wipe out the buf */
-		memset(buf, 0, strlen(buf));
-		g_free(buf);
-		buf = NULL;
+		memset(mirage_current_password, 0, strlen(mirage_current_password));
+		g_free(mirage_current_password);
+		mirage_current_password = NULL;
 	}
 }
 
-static gboolean mirage_allocbuf(const gint size) {
-	buf = g_malloc(size ? size : password_bufsize);
-	return TRUE;
+void mirage_set_password(gchar* const pass) {
+	mirage_forget_password();
+	mirage_current_password = pass;
 }
 
 #ifdef HAVE_LIBASSUAN
@@ -167,12 +165,7 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 		return failure;
 	}
 
-	if (!mirage_allocbuf(rcvlen - 1)) {
-		assuan_release(ctx);
-		return error;
-	}
-	strncpy(buf, &rcvbuf[2], rcvlen - 2);
-	buf[rcvlen - 2] = 0;
+	mirage_set_password(g_strndup(&rcvbuf[2], rcvlen - 2));
 
 	/* and we should get one more 'OK' too; if we don't, we assume that connection was broken */
 	if (((err = assuan_read_line(ctx, &rcvbuf, &rcvlen))) != ASSUAN_No_Error) {
@@ -197,9 +190,8 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 
 #endif
 
-static gboolean mirage_echo(const gboolean newstate) {
+static gboolean mirage_echo(const int fd, const gboolean newstate) {
 #ifdef HAVE_TERMIOS
-	const gint fd = fileno(stdin);
 	struct termios term;
 
 	/* noecho state should have eaten a newline */
@@ -225,26 +217,30 @@ static gboolean mirage_echo(const gboolean newstate) {
 }
 
 static mirage_tristate_t mirage_input_password_stdio(void) {
-	if (!mirage_allocbuf(0))
-		return error;
-
+	const int stdin_fileno = fileno(stdin);
 	/* disable the echo before the prompt as we may output error */
-	const gboolean echooff = mirage_echo(FALSE);
+	const gboolean echooff = mirage_echo(stdin_fileno, FALSE);
 
-	g_printerr("Please input password to the encrypted image: ");
+	GIOChannel *stdin_ch = g_io_channel_unix_new(stdin_fileno);
+	GError *err = NULL;
 
-	if (!fgets(buf, password_bufsize, stdin)) {
-		g_printerr("Password input failed\n");
-		mirage_forget_password();
+	g_printerr("Please input password for the encrypted image: ");
+
+	gchar *buf = NULL;
+	if (g_io_channel_read_line(stdin_ch, &buf, NULL, NULL, &err) == G_IO_STATUS_ERROR) {
 		if (echooff)
-			mirage_echo(TRUE);
+			mirage_echo(stdin_fileno, TRUE);
+		g_printerr("Password input failed: %s\n", err->message);
+		g_error_free(err);
+		g_io_channel_unref(stdin_ch);
 		return error;
 	}
+	g_io_channel_unref(stdin_ch);
 	if (echooff)
-		mirage_echo(TRUE);
+		mirage_echo(stdin_fileno, TRUE);
 
 	/* remove trailing newline */
-	const gint len = strlen(buf);
+	const gint len = buf ? strlen(buf) : 0;
 	gchar *last = &buf[len - 1];
 	gchar *plast = &buf[len - 2];
 
@@ -256,44 +252,34 @@ static mirage_tristate_t mirage_input_password_stdio(void) {
 	}
 
 	/* buf got wiped? */
-	if (!*buf) {
+	if (!buf || !*buf) {
 		g_printerr("No password supplied\n");
-		mirage_forget_password();
+		g_free(buf);
 		return failure;
 	}
 
+	mirage_set_password(buf);
 	return success;
 }
 
 const gchar* mirage_input_password(void) {
-	if (buf) /* password already there */
-		return buf;
+	if (mirage_current_password) /* password already there */
+		return mirage_current_password;
 
 #ifdef HAVE_LIBASSUAN
 	switch (mirage_input_password_pinentry()) {
 		case error: break;
-		case success: return buf;
+		case success: return mirage_current_password;
 		case failure: return NULL;
 	}
 #endif
 
 	switch (mirage_input_password_stdio()) {
 		case error: break;
-		case success: return buf;
+		case success: return mirage_current_password;
 		case failure: return NULL;
 	}
 
 	g_printerr("All supported methods of password input have failed\n");
 	return NULL;
-}
-
-gboolean mirage_set_password(const gchar* const pass) {
-	mirage_forget_password();
-
-	if (!mirage_allocbuf(strlen(pass) + 1))
-		return FALSE;
-
-	strcpy(buf, pass);
-
-	return TRUE;
 }
