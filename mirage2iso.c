@@ -51,7 +51,7 @@ static gboolean force_stdio = FALSE;
 
 static void version(const gboolean mirage) {
 	const gchar* const ver = mirage ? miragewrap_get_version() : NULL;
-	g_print("mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
+	g_printerr("mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
 }
 
 static gboolean common_posix_filesetup(const int fd, const gsize size) {
@@ -146,7 +146,7 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 		f = stdout;
 
 		if (verbose)
-			g_print("Using standard output stream for track %d\n", track_num);
+			g_printerr("Using standard output stream for track %d\n", track_num);
 	} else {
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (!force_stdio)
@@ -169,7 +169,7 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 		}
 
 		if (verbose)
-			g_print("Output file '%s' open for track %d\n", fn, track_num);
+			g_printerr("Output file '%s' open for track %d\n", fn, track_num);
 	}
 
 	if (!miragewrap_output_track(out, track_num, f)) {
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
 	g_option_context_add_main_entries(opt, opts, NULL);
 
 	if (!g_option_context_parse(opt, &argc, &argv, &err)) {
-		g_print("Option parsing failed: %s\n", err->message);
+		g_printerr("Option parsing failed: %s\n", err->message);
 		g_error_free(err);
 		g_option_context_free(opt);
 		g_free(passbuf);
@@ -239,19 +239,19 @@ int main(int argc, char* argv[]) {
 	}
 
 	if (quiet && verbose) {
-		g_print("--verbose and --quiet are contrary options, --verbose will have precedence\n");
+		g_printerr("--verbose and --quiet are contrary options, --verbose will have precedence\n");
 		quiet = FALSE;
 	}
 
 	if (use_stdout) {
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (force_stdio && !quiet)
-			g_print("--stdout already implies --stdio, no need to specify it\n");
+			g_printerr("--stdout already implies --stdio, no need to specify it\n");
 		else
 			force_stdio = TRUE;
 #endif
 		if (force && !quiet)
-			g_print("--force has no effect when --stdout in use\n");
+			g_printerr("--force has no effect when --stdout in use\n");
 	}
 
 	if (passbuf) {
@@ -262,7 +262,7 @@ int main(int argc, char* argv[]) {
 	const gchar* in;
 	if (!newargv || !(in = newargv[0])) {
 		gchar* const helpmsg = g_option_context_get_help(opt, TRUE, NULL);
-		g_print("No input file specified\n%s", helpmsg);
+		g_printerr("No input file specified\n%s", helpmsg);
 		g_free(helpmsg);
 		g_option_context_free(opt);
 		g_strfreev(newargv);
@@ -278,7 +278,7 @@ int main(int argc, char* argv[]) {
 
 			if (ext && !strcmp(ext, ".iso")) {
 				if (!force) {
-					g_print("Input file has .iso suffix and no output file specified\n"
+					g_printerr("Input file has .iso suffix and no output file specified\n"
 							"Either specify one or use --force to use '.iso.iso' output suffix\n");
 					g_strfreev(newargv);
 					return EX_USAGE;
@@ -293,7 +293,7 @@ int main(int argc, char* argv[]) {
 					if (tmp && fclose(tmp))
 						perror("fclose(tmp) failed");
 
-					g_print("No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
+					g_printerr("No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
 					g_free(outbuf);
 					g_strfreev(newargv);
 					return EX_USAGE;
@@ -303,7 +303,7 @@ int main(int argc, char* argv[]) {
 			out = outbuf;
 		}
 	} else if (use_stdout) {
-		g_print("Output file can't be specified with --stdout\n");
+		g_printerr("Output file can't be specified with --stdout\n");
 		g_strfreev(newargv);
 		return EX_USAGE;
 	}
@@ -322,11 +322,11 @@ int main(int argc, char* argv[]) {
 		return EX_NOINPUT;
 	}
 	if (verbose)
-		g_print("Input file '%s' open\n", in);
+		g_printerr("Input file '%s' open\n", in);
 
 	gint tcount;
 	if (((tcount = miragewrap_get_track_count())) > 1 && !quiet)
-		g_print("NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
+		g_printerr("NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
 
 	gint i, ret = !EX_OK;
 	for (i = 0; ret != EX_OK && i < tcount; i++) {
@@ -341,9 +341,9 @@ int main(int argc, char* argv[]) {
 
 	g_free(outbuf);
 	if (ret != EX_OK) /* no valid track found */
-		g_print("No supported track found (audio CD?)\n");
+		g_printerr("No supported track found (audio CD?)\n");
 	else if (verbose)
-		g_print("Done\n");
+		g_printerr("Done\n");
 
 	miragewrap_free();
 	g_strfreev(newargv);
