@@ -201,12 +201,11 @@ int main(int argc, char* argv[]) {
 	gboolean force = false;
 	gboolean use_stdout = false;
 	gchar **newargv = NULL;
+	gchar *passbuf = NULL;
 
 	const GOptionEntry opts[] = {
 		{ "force", 'f', 0, G_OPTION_ARG_NONE, &force, "Force replacing the guessed output file", NULL },
-#if 0 /* XXX: mirage_set_password()? */
-		{ "password", 'p', 0, G_OPTION_ARG_STRING, XXX, "Password for the encrypted image", "PASS" },
-#endif
+		{ "password", 'p', 0, G_OPTION_ARG_STRING, &passbuf, "Password for the encrypted image", "PASS" },
 		{ "quiet", 'q', 0, G_OPTION_ARG_NONE, &quiet, "Disable progress reporting, output only errors", NULL },
 		{ "session", 's', 0, G_OPTION_ARG_INT, &session_num, "Session to use (default: the last one)", "N" },
 		{ "stdio", 'S', 0, G_OPTION_ARG_NONE, &force_stdio, "Force using stdio instead of mmap()", NULL },
@@ -225,6 +224,7 @@ int main(int argc, char* argv[]) {
 		g_print("Option parsing failed: %s\n", err->message);
 		g_error_free(err);
 		g_option_context_free(opt);
+		g_free(passbuf);
 		g_strfreev(newargv);
 		return EX_USAGE;
 	}
@@ -243,6 +243,11 @@ int main(int argc, char* argv[]) {
 #endif
 		if (force && !quiet)
 			fprintf(stderr, "--force has no effect when --stdout in use\n");
+	}
+
+	if (passbuf) {
+		mirage_set_password(passbuf);
+		g_free(passbuf);
 	}
 
 	const char* in;
