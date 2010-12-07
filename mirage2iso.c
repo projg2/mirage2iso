@@ -57,12 +57,12 @@ static void version(const gboolean mirage) {
 static gboolean common_posix_filesetup(const int fd, const gsize size) {
 #ifdef POSIX_FADV_NOREUSE
 	if ((errno = posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE)))
-		perror("posix_fadvise() failed");
+		g_printerr("posix_fadvise() failed: %s", g_strerror(errno));
 #endif
 
 #ifdef HAVE_POSIX_FALLOCATE
 	if ((errno = posix_fallocate(fd, 0, size))) {
-		perror("posix_fallocate() failed");
+		g_printerr("posix_fallocate() failed: %s", g_strerror(errno));
 
 		/* If we can't create file large enough, return false.
 		 * Otherwise, try to proceed. */
@@ -84,7 +84,7 @@ static gboolean common_posix_filesetup(const int fd, const gsize size) {
 static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f, gpointer* const out) {
 	*f = fopen(fn, "w+b");
 	if (!*f) {
-		perror("Unable to open output file");
+		g_printerr("Unable to open output file: %s", g_strerror(errno));
 		return EX_CANTCREAT;
 	}
 
@@ -94,7 +94,7 @@ static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f,
 		return EX_CANTCREAT;
 
 	if (ftruncate(fd, size) == -1) {
-		perror("ftruncate() failed");
+		g_printerr("ftruncate() failed: %s", g_strerror(errno));
 
 		if (errno == EPERM || errno == EINVAL)
 			return EX_OK; /* we can't expand the file, so will try stdio */
@@ -104,7 +104,7 @@ static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f,
 
 	gpointer const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buf == MAP_FAILED)
-		perror("mmap() failed");
+		g_printerr("mmap() failed: %s", g_strerror(errno));
 	else
 		*out = buf;
 
@@ -119,7 +119,7 @@ static gint stdio_open(const gchar* const fn, const gsize size, FILE** const f) 
 		*f = fopen(fn, "wb");
 
 	if (!*f) {
-		perror("Unable to open output file");
+		g_printerr("Unable to open output file: %s", g_strerror(errno));
 		return EX_CANTCREAT;
 	}
 
@@ -159,10 +159,10 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 		if (ret) {
 			if (f) {
 				if (fclose(f))
-					perror("fclose() failed");
+					g_printerr("fclose() failed: %s", g_strerror(errno));
 				/* We probably ate the whole disk space, so unlink the file. */
 				if (remove(fn))
-					perror("remove() failed");
+					g_printerr("remove() failed: %s", g_strerror(errno));
 			}
 
 			return ret;
@@ -175,20 +175,20 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 	if (!miragewrap_output_track(out, track_num, f)) {
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (out && munmap(out, size))
-			perror("munmap() failed");
+			g_printerr("munmap() failed: %s", g_strerror(errno));
 #endif
 		if (!use_stdout && fclose(f))
-			perror("fclose() failed");
+			g_printerr("fclose() failed: %s", g_strerror(errno));
 		return EX_IOERR;
 	}
 
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 	if (out && munmap(out, size))
-		perror("munmap() failed");
+		g_printerr("munmap() failed: %s", g_strerror(errno));
 #endif
 
 	if (!use_stdout && fclose(f)) {
-		perror("fclose() failed");
+		g_printerr("fclose() failed: %s", g_strerror(errno));
 		return EX_IOERR;
 	}
 
@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
 				FILE *tmp = fopen(outbuf, "r");
 				if (tmp || errno != ENOENT) {
 					if (tmp && fclose(tmp))
-						perror("fclose(tmp) failed");
+						g_printerr("fclose(tmp) failed: %s", g_strerror(errno));
 
 					g_printerr("No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
 					g_free(outbuf);
