@@ -9,7 +9,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 
@@ -43,19 +42,19 @@
 #include "mirage-password.h"
 #include "mirage-wrapper.h"
 
-gboolean quiet = false;
-gboolean verbose = false;
+gboolean quiet = FALSE;
+gboolean verbose = FALSE;
 
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-static gboolean force_stdio = false;
+static gboolean force_stdio = FALSE;
 #endif
 
-static void version(const bool mirage) {
-	const char* const ver = mirage ? miragewrap_get_version() : NULL;
-	fprintf(stderr, "mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
+static void version(const gboolean mirage) {
+	const gchar* const ver = mirage ? miragewrap_get_version() : NULL;
+	g_print("mirage2iso %s, using libmirage %s\n", VERSION, ver ? ver : "unknown");
 }
 
-static bool common_posix_filesetup(const int fd, const size_t size) {
+static gboolean common_posix_filesetup(const int fd, const gsize size) {
 #ifdef POSIX_FADV_NOREUSE
 	if ((errno = posix_fadvise(fd, 0, 0, POSIX_FADV_NOREUSE)))
 		perror("posix_fadvise() failed");
@@ -69,20 +68,20 @@ static bool common_posix_filesetup(const int fd, const size_t size) {
 		 * Otherwise, try to proceed. */
 #ifdef EFBIG
 		if (errno == EFBIG)
-			return false;
+			return FALSE;
 #endif
 #ifdef ENOSPC
 		if (errno == ENOSPC)
-			return false;
+			return FALSE;
 #endif
 	}
 #endif
 
-	return true;
+	return TRUE;
 }
 
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-static int mmapio_open(const char* const fn, const size_t size, FILE** const f, void** const out) {
+static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f, gpointer* const out) {
 	*f = fopen(fn, "w+b");
 	if (!*f) {
 		perror("Unable to open output file");
@@ -103,7 +102,7 @@ static int mmapio_open(const char* const fn, const size_t size, FILE** const f, 
 			return EX_IOERR;
 	}
 
-	void* const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+	gpointer const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buf == MAP_FAILED)
 		perror("mmap() failed");
 	else
@@ -113,7 +112,7 @@ static int mmapio_open(const char* const fn, const size_t size, FILE** const f, 
 }
 #endif
 
-static int stdio_open(const char* const fn, const size_t size, FILE** const f) {
+static gint stdio_open(const gchar* const fn, const gsize size, FILE** const f) {
 	if (*f)
 		*f = freopen(fn, "wb", *f);
 	else
@@ -132,22 +131,22 @@ static int stdio_open(const char* const fn, const size_t size, FILE** const f) {
 	return EX_OK;
 }
 
-static int output_track(const char* const fn, const int track_num) {
-	const bool use_stdout = !fn;
+static gint output_track(const gchar* const fn, const gint track_num) {
+	const gboolean use_stdout = !fn;
 
-	size_t size = miragewrap_get_track_size(track_num);
+	gsize size = miragewrap_get_track_size(track_num);
 	if (size == 0)
 		return EX_DATAERR;
 
 	FILE *f = NULL;
-	void *out = NULL;
-	int ret = EX_OK;
+	gpointer out = NULL;
+	gint ret = EX_OK;
 
 	if (use_stdout) {
 		f = stdout;
 
 		if (verbose)
-			fprintf(stderr, "Using standard output stream for track %d\n", track_num);
+			g_print("Using standard output stream for track %d\n", track_num);
 	} else {
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (!force_stdio)
@@ -170,7 +169,7 @@ static int output_track(const char* const fn, const int track_num) {
 		}
 
 		if (verbose)
-			fprintf(stderr, "Output file '%s' open for track %d\n", fn, track_num);
+			g_print("Output file '%s' open for track %d\n", fn, track_num);
 	}
 
 	if (!miragewrap_output_track(out, track_num, f)) {
@@ -198,9 +197,9 @@ static int output_track(const char* const fn, const int track_num) {
 
 int main(int argc, char* argv[]) {
 	gint session_num = -1;
-	gboolean force = false;
-	gboolean use_stdout = false;
-	gboolean want_version = false;
+	gboolean force = FALSE;
+	gboolean use_stdout = FALSE;
+	gboolean want_version = FALSE;
 	gchar **newargv = NULL;
 	gchar *passbuf = NULL;
 
@@ -235,24 +234,24 @@ int main(int argc, char* argv[]) {
 		g_option_context_free(opt);
 		g_free(passbuf);
 		g_strfreev(newargv);
-		version(true);
+		version(TRUE);
 		return EX_OK;
 	}
 
 	if (quiet && verbose) {
-		fprintf(stderr, "--verbose and --quiet are contrary options, --verbose will have precedence\n");
-		quiet = false;
+		g_print("--verbose and --quiet are contrary options, --verbose will have precedence\n");
+		quiet = FALSE;
 	}
 
 	if (use_stdout) {
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (force_stdio && !quiet)
-			fprintf(stderr, "--stdout already implies --stdio, no need to specify it\n");
+			g_print("--stdout already implies --stdio, no need to specify it\n");
 		else
-			force_stdio = true;
+			force_stdio = TRUE;
 #endif
 		if (force && !quiet)
-			fprintf(stderr, "--force has no effect when --stdout in use\n");
+			g_print("--force has no effect when --stdout in use\n");
 	}
 
 	if (passbuf) {
@@ -260,11 +259,10 @@ int main(int argc, char* argv[]) {
 		g_free(passbuf);
 	}
 
-	const char* in;
+	const gchar* in;
 	if (!newargv || !(in = newargv[0])) {
 		gchar* const helpmsg = g_option_context_get_help(opt, TRUE, NULL);
-		fprintf(stderr, "No input file specified\n");
-		g_print("%s", helpmsg);
+		g_print("No input file specified\n%s", helpmsg);
 		g_free(helpmsg);
 		g_option_context_free(opt);
 		g_strfreev(newargv);
@@ -272,15 +270,15 @@ int main(int argc, char* argv[]) {
 	}
 	g_option_context_free(opt);
 
-	const char* out = newargv[1];
-	char* outbuf = NULL;
+	const gchar* out = newargv[1];
+	gchar* outbuf = NULL;
 	if (!out) {
 		if (!use_stdout) {
-			const char* ext = strrchr(in, '.');
+			const gchar* ext = strrchr(in, '.');
 
 			if (ext && !strcmp(ext, ".iso")) {
 				if (!force) {
-					fprintf(stderr, "Input file has .iso suffix and no output file specified\n"
+					g_print("Input file has .iso suffix and no output file specified\n"
 							"Either specify one or use --force to use '.iso.iso' output suffix\n");
 					g_strfreev(newargv);
 					return EX_USAGE;
@@ -288,25 +286,15 @@ int main(int argc, char* argv[]) {
 				ext = NULL;
 			}
 
-			const int namelen = strlen(in) - (ext ? strlen(ext) : 0);
-
-			outbuf = malloc(namelen + 5);
-			if (!outbuf) {
-				perror("malloc() for output filename failed");
-				g_strfreev(newargv);
-				return EX_OSERR;
-			}
-			strncpy(outbuf, in, namelen);
-			strcat(outbuf, ".iso");
-
+			outbuf = g_strdup_printf("%s.iso", in);
 			if (!force) {
 				FILE *tmp = fopen(outbuf, "r");
 				if (tmp || errno != ENOENT) {
 					if (tmp && fclose(tmp))
 						perror("fclose(tmp) failed");
 
-					fprintf(stderr, "No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
-					free(outbuf);
+					g_print("No output file specified and guessed filename matches existing file:\n\t%s\n", outbuf);
+					g_free(outbuf);
 					g_strfreev(newargv);
 					return EX_USAGE;
 				}
@@ -315,7 +303,7 @@ int main(int argc, char* argv[]) {
 			out = outbuf;
 		}
 	} else if (use_stdout) {
-		fprintf(stderr, "Output file can't be specified with --stdout\n");
+		g_print("Output file can't be specified with --stdout\n");
 		g_strfreev(newargv);
 		return EX_USAGE;
 	}
@@ -326,7 +314,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	if (verbose)
-		version(true);
+		version(TRUE);
 
 	if (!miragewrap_open(in, session_num)) {
 		miragewrap_free();
@@ -334,13 +322,13 @@ int main(int argc, char* argv[]) {
 		return EX_NOINPUT;
 	}
 	if (verbose)
-		fprintf(stderr, "Input file '%s' open\n", in);
+		g_print("Input file '%s' open\n", in);
 
-	int tcount;
+	gint tcount;
 	if (((tcount = miragewrap_get_track_count())) > 1 && !quiet)
-		fprintf(stderr, "NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
+		g_print("NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
 
-	int i, ret = !EX_OK;
+	gint i, ret = !EX_OK;
 	for (i = 0; ret != EX_OK && i < tcount; i++) {
 		ret = output_track(out, i);
 
@@ -351,13 +339,11 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (outbuf)
-		free(outbuf);
-
+	g_free(outbuf);
 	if (ret != EX_OK) /* no valid track found */
-		fprintf(stderr, "No supported track found (audio CD?)\n");
+		g_print("No supported track found (audio CD?)\n");
 	else if (verbose)
-		fprintf(stderr, "Done\n");
+		g_print("Done\n");
 
 	miragewrap_free();
 	g_strfreev(newargv);
