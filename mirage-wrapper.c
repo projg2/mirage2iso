@@ -7,18 +7,20 @@
 #	include "mirage-config.h"
 #endif
 
+#include <glib.h>
+
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 
 #include <mirage.h>
 #include "mirage-compat.h"
 #include "mirage-password.h"
 
-extern bool quiet;
-extern bool verbose;
+extern gboolean quiet;
+extern gboolean verbose;
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 static MIRAGE_Mirage *mirage = NULL;
@@ -29,23 +31,23 @@ static gint tracks;
 
 static GError *err = NULL;
 
-static bool miragewrap_err(const char* const format, ...) {
+static gboolean miragewrap_err(const gchar* const format, ...) {
 	va_list ap;
 
 	va_start(ap, format);
-	vfprintf(stderr, format, ap);
+	g_vfprintf(stderr, format, ap);
 	va_end(ap);
 
-	fprintf(stderr, ": %s\n", err ? err->message : "(err undefined?!)");
+	g_printerr(": %s\n", err ? err->message : "(err undefined?!)");
 	g_error_free(err);
 
-	return false;
+	return FALSE;
 }
 
 #ifdef MIRAGE_HAS_PASSWORD_SUPPORT
 
 gchar* miragewrap_password_callback(gpointer user_data) {
-	const char* const pass = mirage_input_password();
+	const gchar* const pass = mirage_input_password();
 
 	if (!pass)
 		return NULL;
@@ -55,7 +57,7 @@ gchar* miragewrap_password_callback(gpointer user_data) {
 
 #endif
 
-bool miragewrap_init(void) {
+gboolean miragewrap_init(void) {
 	g_type_init();
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
@@ -71,17 +73,17 @@ bool miragewrap_init(void) {
 		miragewrap_err("Unable to set password callback");
 #endif
 
-	return true;
+	return TRUE;
 }
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 
-const char* miragewrap_get_version(void) {
-	static char buf[10];
+const gchar* miragewrap_get_version(void) {
+	static gchar buf[10];
 	gchar *tmp;
 
 	if (!mirage) {
-		fprintf(stderr, "miragewrap_get_version() has to be called after miragewrap_init()\n");
+		g_printerr("miragewrap_get_version() has to be called after miragewrap_init()\n");
 		return NULL;
 	}
 
@@ -91,7 +93,7 @@ const char* miragewrap_get_version(void) {
 	}
 
 	if (strlen(tmp) > 9)
-		fprintf(stderr, "libmirage version string too long: %s\n", tmp);
+		g_printerr("libmirage version string too long: %s\n", tmp);
 
 	strncpy(buf, tmp, sizeof(buf)-1);
 	buf[sizeof(buf)-1] = 0;
@@ -102,16 +104,16 @@ const char* miragewrap_get_version(void) {
 
 #else
 
-const char* miragewrap_get_version(void) {
+const gchar* miragewrap_get_version(void) {
 	return mirage_version_long;
 }
 
 #endif
 
-bool miragewrap_open(const char* const fn, const int session_num) {
+gboolean miragewrap_open(const gchar* const fn, const gint session_num) {
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!mirage) {
-		fprintf(stderr, "miragewrap_open() has to be called after miragewrap_init()\n");
+		g_printerr("miragewrap_open() has to be called after miragewrap_init()\n");
 		return false;
 	}
 #endif /* XXX: add some check for new API */
@@ -125,7 +127,7 @@ bool miragewrap_open(const char* const fn, const int session_num) {
 	if (!((disc = (MIRAGE_Disc*) libmirage_create_disc(filenames, NULL, NULL, &err)))) {
 #endif
 		disc = NULL;
-		free(_fn);
+		g_free(_fn);
 		return miragewrap_err("Unable to open input '%s'", fn);
 	}
 	g_free(_fn);
@@ -135,8 +137,8 @@ bool miragewrap_open(const char* const fn, const int session_num) {
 	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err))
 		return miragewrap_err("Unable to get session count");
 	if (sessions == 0) {
-		fprintf(stderr, "Input file doesn't contain any session\n");
-		return false;
+		g_printerr("Input file doesn't contain any session\n");
+		return FALSE;
 	}
 
 	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err)) {
@@ -148,28 +150,28 @@ bool miragewrap_open(const char* const fn, const int session_num) {
 		return miragewrap_err("Unable to get track count");
 
 	if (tracks == 0) {
-		fprintf(stderr, "Input session doesn't contain any track\n");
-		return false;
+		g_printerr("Input session doesn't contain any track\n");
+		return FALSE;
 	}
 
-	return true;
+	return TRUE;
 }
 
-int miragewrap_get_track_count(void) {
+gint miragewrap_get_track_count(void) {
 	if (!session) {
-		fprintf(stderr, "miragewrap_get_track_count() has to be called after miragewrap_open()\n");
+		g_printerr("miragewrap_get_track_count() has to be called after miragewrap_open()\n");
 		return 0;
 	}
 
 	return tracks;
 }
 
-static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *sstart, gint *len, int *sectsize) {
+static MIRAGE_Track *miragewrap_get_track_common(const gint track_num, gint *sstart, gint *len, gint *sectsize) {
 	MIRAGE_Track *track = NULL;
 
 	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err)) {
 		track = NULL;
-		miragewrap_err("Unable to get track %d", track_num);;
+		miragewrap_err("Unable to get track %d", track_num);
 		return NULL;
 	}
 
@@ -198,7 +200,7 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 			return 0;
 		}
 
-		const char* unsupp_desc = NULL;
+		const gchar* unsupp_desc = NULL;
 		switch (mode) {
 			/* supported modes, we set *sectsize and leave unsupp_desc NULL */
 			case MIRAGE_MODE_MODE1:
@@ -223,13 +225,13 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 				break;
 			/* unknown mode, report it even if non-verbose and leave now */
 			default:
-				fprintf(stderr, "Unknown track mode (%d) for track %d (newer libmirage?)\n", mode, track_num);
+				g_printerr("Unknown track mode (%d) for track %d (newer libmirage?)\n", mode, track_num);
 				return NULL;
 		}
 
 		if (unsupp_desc) { /* got unsupported mode */
 			if (verbose)
-				fprintf(stderr, "Track %d is %s track (unsupported)\n", track_num, unsupp_desc);
+				g_printerr("Track %d is %s track (unsupported)\n", track_num, unsupp_desc);
 			return NULL;
 		}
 	}
@@ -237,14 +239,13 @@ static MIRAGE_Track *miragewrap_get_track_common(const int track_num, gint *ssta
 	return track;
 }
 
-size_t miragewrap_get_track_size(const int track_num) {
+gsize miragewrap_get_track_size(const gint track_num) {
 	if (!session) {
-		fprintf(stderr, "miragewrap_get_track_size() has to be called after miragewrap_open()\n");
+		g_printerr("miragewrap_get_track_size() has to be called after miragewrap_open()\n");
 		return 0;
 	}
 
-	gint sstart, len;
-	int expssize;
+	gint sstart, len, expssize;
 
 	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len, &expssize);
 	if (!track)
@@ -255,77 +256,64 @@ size_t miragewrap_get_track_size(const int track_num) {
 	return expssize * (len-sstart);
 }
 
-bool miragewrap_output_track(void* const out, const int track_num, FILE* const f) {
-	const bool use_mmap = !!out;
+gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f) {
+	const gboolean use_mmap = !!out;
 
 	if (!session) {
-		fprintf(stderr, "miragewrap_output_track() has to be called after miragewrap_open()\n");
+		g_printerr("miragewrap_output_track() has to be called after miragewrap_open()\n");
 		return 0;
 	}
 
-	gint sstart, len;
-	int bufsize;
+	gint sstart, len, bufsize;
 	MIRAGE_Track *track = miragewrap_get_track_common(track_num, &sstart, &len, &bufsize);
 
 	if (!track)
-		return false;
+		return FALSE;
 
 	gint i, olen;
-	const int vlen = quiet ? 0 : snprintf(NULL, 0, "%d", len); /* printf() accepts <= 0 */
-
-	guint8 *buf;
-	if (!use_mmap) {
-		buf = malloc(bufsize);
-
-		if (!buf) {
-			fprintf(stderr, "malloc(%d) for buffer failed\n", bufsize);
-			g_object_unref(track);
-			return false;
-		}
-	} else
-		buf = out;
+	const gint vlen = quiet ? 0 : snprintf(NULL, 0, "%d", len); /* printf() accepts <= 0 */
+	guint8* buf = use_mmap ? out : g_malloc(bufsize);
 
 	len--; /* well, now it's rather 'last' */
 	for (i = sstart; i <= len; i++) {
 		if (!quiet && !(i % 64))
-			fprintf(stderr, "\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
+			g_printerr("\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
 
 		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, buf, &olen, &err)) {
 			g_object_unref(track);
 			if (!use_mmap)
-				free(buf);
+				g_free(buf);
 			return miragewrap_err("%sUnable to read sector %d", quiet ? "" : "\n", i);
 		}
 
 		if (olen != bufsize) {
-			fprintf(stderr, "%sData read returned %d bytes while %d was expected\n",
+			g_printerr("%sData read returned %d bytes while %d was expected\n",
 					quiet ? "" : "\n", olen, bufsize);
 			g_object_unref(track);
 			if (!use_mmap)
-				free(buf);
-			return false;
+				g_free(buf);
+			return FALSE;
 		}
 
 		if (!use_mmap) {
 			if (fwrite(buf, olen, 1, f) != 1) {
-				fprintf(stderr, "%sWrite failed on sector %d%s", quiet ? "" : "\n", i,
-						ferror(f) ? ": " : " but error flag not set\n");
-				if (ferror(f))
-					perror(NULL);
+				g_printerr("%sWrite failed on sector %d%s%s", quiet ? "" : "\n", i,
+						ferror(f) ? ": " : " but error flag not set\n",
+						ferror(f) ? g_strerror(errno) : "");
 				g_object_unref(track);
-				free(buf);
-				return false;
+				g_free(buf);
+				return FALSE;
 			}
 		} else
 			buf += olen;
 	}
 	if (!quiet)
-		fprintf(stderr, "\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
+		g_printerr("\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
 	if (!use_mmap)
-		free(buf);
+		g_free(buf);
 
 	g_object_unref(track);
-	return true;
+	return TRUE;
 }
 
 void miragewrap_free(void) {

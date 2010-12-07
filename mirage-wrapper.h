@@ -6,14 +6,14 @@
 #ifndef _MIRAGE_WRAPPER_H
 #define _MIRAGE_WRAPPER_H 1
 
-#include <stdbool.h>
+#include <glib.h>
 
-bool miragewrap_init(void);
-const char* miragewrap_get_version(void);
-bool miragewrap_open(const char* const fn, const int session_num);
-int miragewrap_get_track_count(void);
-size_t miragewrap_get_track_size(const int track_num);
-bool miragewrap_output_track(void* const out, const int track_num, FILE* const f);
+gboolean miragewrap_init(void);
+const gchar* miragewrap_get_version(void);
+gboolean miragewrap_open(const gchar* const fn, const gint session_num);
+gint miragewrap_get_track_count(void);
+gsize miragewrap_get_track_size(const gint track_num);
+gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f);
 void miragewrap_free(void);
 
 #endif
