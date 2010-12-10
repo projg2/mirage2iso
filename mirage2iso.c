@@ -82,14 +82,16 @@ static gboolean common_posix_filesetup(const int fd, const gsize size) {
 
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f, gpointer* const out) {
+	int fd;
+	gpointer buf;
+
 	*f = fopen(fn, "w+b");
 	if (!*f) {
 		g_printerr("Unable to open output file: %s", g_strerror(errno));
 		return EX_CANTCREAT;
 	}
 
-	const int fd = fileno(*f);
-
+	fd = fileno(*f);
 	if (!common_posix_filesetup(fd, size))
 		return EX_CANTCREAT;
 
@@ -102,7 +104,7 @@ static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f,
 			return EX_IOERR;
 	}
 
-	gpointer const buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+	buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buf == MAP_FAILED)
 		g_printerr("mmap() failed: %s", g_strerror(errno));
 	else
@@ -135,12 +137,12 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 	const gboolean use_stdout = !fn;
 
 	gsize size = miragewrap_get_track_size(track_num);
-	if (size == 0)
-		return EX_DATAERR;
-
 	FILE *f = NULL;
 	gpointer out = NULL;
 	gint ret = EX_OK;
+
+	if (size == 0)
+		return EX_DATAERR;
 
 	if (use_stdout) {
 		f = stdout;
@@ -203,20 +205,32 @@ int main(int argc, char* argv[]) {
 	gchar **newargv = NULL;
 	gchar *passbuf = NULL;
 
-	const GOptionEntry opts[] = {
-		{ "force", 'f', 0, G_OPTION_ARG_NONE, &force, "Force replacing the guessed output file", NULL },
-		{ "password", 'p', 0, G_OPTION_ARG_STRING, &passbuf, "Password for the encrypted image", "PASS" },
+	GOptionEntry opts[] = {
+		{ "force", 'f', 0, G_OPTION_ARG_NONE, NULL, "Force replacing the guessed output file", NULL },
+		{ "password", 'p', 0, G_OPTION_ARG_STRING, NULL, "Password for the encrypted image", "PASS" },
 		{ "quiet", 'q', 0, G_OPTION_ARG_NONE, &quiet, "Disable progress reporting, output only errors", NULL },
-		{ "session", 's', 0, G_OPTION_ARG_INT, &session_num, "Session to use (default: the last one)", "N" },
+		{ "session", 's', 0, G_OPTION_ARG_INT, NULL, "Session to use (default: the last one)", "N" },
 		{ "stdio", 'S', 0, G_OPTION_ARG_NONE, &force_stdio, "Force using stdio instead of mmap()", NULL },
-		{ "stdout", 'c', 0, G_OPTION_ARG_NONE, &use_stdout, "Output the image into stdout instead of a file", NULL },
+		{ "stdout", 'c', 0, G_OPTION_ARG_NONE, NULL, "Output the image into stdout instead of a file", NULL },
 		{ "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Increase progress reporting verbosity", NULL },
-		{ "version", 'V', 0, G_OPTION_ARG_NONE, &want_version, "Print program version and exit", NULL },
-		{ G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &newargv, NULL, "<in> [<out.iso>]" },
+		{ "version", 'V', 0, G_OPTION_ARG_NONE, NULL, "Print program version and exit", NULL },
+		{ G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, NULL, NULL, "<in> [<out.iso>]" },
 		{ NULL }
 	};
 	GOptionContext *opt;
 	GError *err = NULL;
+
+	const gchar* in;
+	const gchar* out;
+	gchar* outbuf;
+	gint ret = !EX_OK;
+
+	opts[0].arg_data = &force;
+	opts[1].arg_data = &passbuf;
+	opts[3].arg_data = &session_num;
+	opts[5].arg_data = &use_stdout;
+	opts[7].arg_data = &want_version;
+	opts[8].arg_data = &newargv;
 
 	opt = g_option_context_new(NULL);
 	g_option_context_add_main_entries(opt, opts, NULL);
@@ -257,7 +271,6 @@ int main(int argc, char* argv[]) {
 	if (passbuf)
 		mirage_set_password(passbuf);
 
-	const gchar* in;
 	if (!newargv || !(in = newargv[0])) {
 		gchar* const helpmsg = g_option_context_get_help(opt, TRUE, NULL);
 		g_printerr("No input file specified\n%s", helpmsg);
@@ -269,8 +282,8 @@ int main(int argc, char* argv[]) {
 	}
 	g_option_context_free(opt);
 
-	const gchar* out = newargv[1];
-	gchar* outbuf = NULL;
+	out = newargv[1];
+	outbuf = NULL;
 	if (!out) {
 		if (!use_stdout) {
 			const gchar* ext = strrchr(in, '.');
@@ -328,19 +341,21 @@ int main(int argc, char* argv[]) {
 	if (verbose)
 		g_printerr("Input file '%s' open\n", in);
 
-	gint tcount;
-	if (((tcount = miragewrap_get_track_count())) > 1 && !quiet)
-		g_printerr("NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
+	{
+		gint tcount, i;
 
-	gint i, ret = !EX_OK;
-	for (i = 0; ret != EX_OK && i < tcount; i++) {
-		ret = output_track(out, i);
+		if (((tcount = miragewrap_get_track_count())) > 1 && !quiet)
+			g_printerr("NOTE: input session contains %d tracks; mirage2iso will read only the first usable one\n", tcount);
 
-		if (ret != EX_OK && ret != EX_DATAERR) {
-			miragewrap_free();
-			g_strfreev(newargv);
-			mirage_forget_password();
-			return ret;
+		for (i = 0; ret != EX_OK && i < tcount; i++) {
+			ret = output_track(out, i);
+
+			if (ret != EX_OK && ret != EX_DATAERR) {
+				miragewrap_free();
+				g_strfreev(newargv);
+				mirage_forget_password();
+				return ret;
+			}
 		}
 	}
 
