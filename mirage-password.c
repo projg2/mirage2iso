@@ -115,6 +115,8 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 	const gchar* const shell = mirage_getshell();
 	const gchar* args[] = { shell, "-c", "exec pinentry", NULL };
 	gint noclose[] = { -1 };
+	gchar *rcvbuf;
+	gsize rcvlen;
 
 	assuan_context_t ctx;
 	assuan_error_t err;
@@ -142,9 +144,6 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 	}
 
 	assuan_begin_confidential(ctx);
-
-	gchar *rcvbuf;
-	gsize rcvlen;
 
 	if (((err = assuan_write_line(ctx, "GETPIN"))) != ASSUAN_No_Error) {
 		g_printerr("Failed to send the password request to pinentry: %s\n", assuan_strerror(err));
@@ -223,10 +222,10 @@ static mirage_tristate_t mirage_input_password_stdio(void) {
 
 	GIOChannel *stdin_ch = g_io_channel_unix_new(stdin_fileno);
 	GError *err = NULL;
+	gchar *buf = NULL;
 
 	g_printerr("Please input password for the encrypted image: ");
 
-	gchar *buf = NULL;
 	if (g_io_channel_read_line(stdin_ch, &buf, NULL, NULL, &err) == G_IO_STATUS_ERROR) {
 		if (echooff)
 			mirage_echo(stdin_fileno, TRUE);
@@ -239,16 +238,18 @@ static mirage_tristate_t mirage_input_password_stdio(void) {
 	if (echooff)
 		mirage_echo(stdin_fileno, TRUE);
 
-	/* remove trailing newline */
-	const gint len = buf ? strlen(buf) : 0;
-	gchar *last = &buf[len - 1];
-	gchar *plast = &buf[len - 2];
+	{
+		/* remove trailing newline */
+		const gint len = buf ? strlen(buf) : 0;
+		gchar *last = &buf[len - 1];
+		gchar *plast = &buf[len - 2];
 
-	/* support single LF, single CR, CR/LF, LF/CR */
-	if (len >= 1 && (*last == '\n' || *last == '\r')) {
-		if (len >= 2 && *plast != *last && (*plast == '\r' || *plast == '\n'))
-			*plast = 0;
-		*last = 0;
+		/* support single LF, single CR, CR/LF, LF/CR */
+		if (len >= 1 && (*last == '\n' || *last == '\r')) {
+			if (len >= 2 && *plast != *last && (*plast == '\r' || *plast == '\n'))
+				*plast = 0;
+			*last = 0;
+		}
 	}
 
 	/* buf got wiped? */
