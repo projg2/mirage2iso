@@ -29,21 +29,6 @@ static MIRAGE_Disc *disc = NULL;
 static MIRAGE_Session *session = NULL;
 static gint tracks;
 
-static GError *err = NULL;
-
-static gboolean miragewrap_err(const gchar* const format, ...) {
-	va_list ap;
-
-	va_start(ap, format);
-	g_vfprintf(stderr, format, ap);
-	va_end(ap);
-
-	g_printerr(": %s\n", err ? err->message : "(err undefined?!)");
-	g_error_free(err);
-
-	return FALSE;
-}
-
 #ifdef MIRAGE_HAS_PASSWORD_SUPPORT
 
 gchar* miragewrap_password_callback(gpointer user_data) {
@@ -58,19 +43,26 @@ gchar* miragewrap_password_callback(gpointer user_data) {
 #endif
 
 gboolean miragewrap_init(void) {
+	GError *err = NULL;
+
 	g_type_init();
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!((mirage = g_object_new(MIRAGE_TYPE_MIRAGE, NULL))))
 		return FALSE;
 #else
-	if (!libmirage_init(&err))
-		return miragewrap_err("Unable to init libmirage");
+	if (!libmirage_init(&err)) {
+		g_printerr("Unable to init libmirage: %s\n", err->message);
+		g_error_free(err);
+		return FALSE;
+	}
 #endif
 
 #ifdef MIRAGE_HAS_PASSWORD_SUPPORT
-	if (!libmirage_set_password_function(miragewrap_password_callback, NULL, &err))
-		miragewrap_err("Unable to set password callback");
+	if (!libmirage_set_password_function(miragewrap_password_callback, NULL, &err)) {
+		g_printerr("Unable to set password callback: %s\n", err->message);
+		g_error_free(err);
+	}
 #endif
 
 	return TRUE;
@@ -81,6 +73,7 @@ gboolean miragewrap_init(void) {
 const gchar* miragewrap_get_version(void) {
 	static gchar buf[10];
 	gchar *tmp;
+	GError *err = NULL;
 
 	if (!mirage) {
 		g_printerr("miragewrap_get_version() has to be called after miragewrap_init()\n");
@@ -88,7 +81,8 @@ const gchar* miragewrap_get_version(void) {
 	}
 
 	if (!mirage_mirage_get_version(mirage, &tmp, &err)) {
-		miragewrap_err("Unable to get libmirage version");
+		g_printerr("Unable to get libmirage version: %s\n", err->message);
+		g_error_free(err);
 		return NULL;
 	}
 
@@ -111,6 +105,8 @@ const gchar* miragewrap_get_version(void) {
 #endif
 
 gboolean miragewrap_open(const gchar* const fn, const gint session_num) {
+	GError *err = NULL;
+
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!mirage) {
 		g_printerr("miragewrap_open() has to be called after miragewrap_init()\n");
@@ -126,16 +122,21 @@ gboolean miragewrap_open(const gchar* const fn, const gint session_num) {
 #else
 	if (!((disc = (MIRAGE_Disc*) libmirage_create_disc(filenames, NULL, NULL, &err)))) {
 #endif
+		g_printerr("Unable to open input '%s': %s\n", fn, err->message);
 		disc = NULL;
 		g_free(_fn);
-		return miragewrap_err("Unable to open input '%s'", fn);
+		g_error_free(err);
+		return FALSE;
 	}
 	g_free(_fn);
 
 	gint sessions;
 
-	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err))
-		return miragewrap_err("Unable to get session count");
+	if (!mirage_disc_get_number_of_sessions(disc, &sessions, &err)) {
+		g_printerr("Unable to get session count: %s\n", err->message);
+		g_error_free(err);
+		return FALSE;
+	}
 	if (sessions == 0) {
 		g_printerr("Input file doesn't contain any session\n");
 		return FALSE;
@@ -143,11 +144,19 @@ gboolean miragewrap_open(const gchar* const fn, const gint session_num) {
 
 	if (!mirage_disc_get_session_by_index(disc, session_num, (GObject**) &session, &err)) {
 		session = NULL;
-		return miragewrap_err(session_num == -1 ? "Unable to get last session" : "Unable to get session %d", session_num);
+		if (session_num == -1)
+			g_printerr("Unable to get the last session: %s\n", err->message);
+		else
+			g_printerr("Unable to get session %d: %s\n", session_num, err->message);
+		g_error_free(err);
+		return FALSE;
 	}
 
-	if (!mirage_session_get_number_of_tracks(session, &tracks, &err))
-		return miragewrap_err("Unable to get track count");
+	if (!mirage_session_get_number_of_tracks(session, &tracks, &err)) {
+		g_printerr("Unable to get track count: %s\n", err->message);
+		g_error_free(err);
+		return FALSE;
+	}
 
 	if (tracks == 0) {
 		g_printerr("Input session doesn't contain any track\n");
@@ -168,25 +177,29 @@ gint miragewrap_get_track_count(void) {
 
 static MIRAGE_Track *miragewrap_get_track_common(const gint track_num, gint *sstart, gint *len, gint *sectsize) {
 	MIRAGE_Track *track = NULL;
+	GError *err = NULL;
 
 	if (!mirage_session_get_track_by_index(session, track_num, (GObject**) &track, &err)) {
+		g_printerr("Unable to get track %d: %s\n", track_num, err->message);
 		track = NULL;
-		miragewrap_err("Unable to get track %d", track_num);
+		g_error_free(err);
 		return NULL;
 	}
 
 	if (sstart) {
 		if (!mirage_track_get_track_start(track, sstart, &err)) {
+			g_printerr("Unable to get track start for track %d: %s\n", track_num, err->message);
 			g_object_unref(track);
-			miragewrap_err("Unable to get track start for track %d", track_num);
+			g_error_free(err);
 			return NULL;
 		}
 	}
 
 	if (len) {
 		if (!mirage_track_layout_get_length(track, len, &err)) {
+			g_printerr("Unable to get track length for track %d: %s\n", track_num, err->message);
 			g_object_unref(track);
-			miragewrap_err("Unable to get track length for track %d", track_num);
+			g_error_free(err);
 			return NULL;
 		}
 	}
@@ -195,8 +208,9 @@ static MIRAGE_Track *miragewrap_get_track_common(const gint track_num, gint *sst
 		gint mode;
 
 		if (!mirage_track_get_mode(track, &mode, &err)) {
+			g_printerr("Unable to get track mode for track %d: %s\n", track_num, err->message);
 			g_object_unref(track);
-			miragewrap_err("Unable to get track mode for track %d", track_num);
+			g_error_free(err);
 			return 0;
 		}
 
@@ -258,6 +272,7 @@ gsize miragewrap_get_track_size(const gint track_num) {
 
 gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f) {
 	const gboolean use_mmap = !!out;
+	GError *err = NULL;
 
 	if (!session) {
 		g_printerr("miragewrap_output_track() has to be called after miragewrap_open()\n");
@@ -280,10 +295,12 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 			g_printerr("\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
 
 		if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, buf, &olen, &err)) {
+			g_printerr("%sUnable to read sector %d", quiet ? "" : "\n: %s\n", i, err->message);
 			g_object_unref(track);
 			if (!use_mmap)
 				g_free(buf);
-			return miragewrap_err("%sUnable to read sector %d", quiet ? "" : "\n", i);
+			g_error_free(err);
+			return FALSE;
 		}
 
 		if (olen != bufsize) {
@@ -317,6 +334,8 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 }
 
 void miragewrap_free(void) {
+	GError *err;
+
 #ifdef MIRAGE_HAS_PASSWORD_SUPPORT
 	mirage_forget_password();
 #endif
@@ -326,7 +345,9 @@ void miragewrap_free(void) {
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (mirage) g_object_unref(mirage);
 #else
-	if (!libmirage_shutdown(&err))
-		miragewrap_err("Library shutdown failed");
+	if (!libmirage_shutdown(&err)) {
+		g_printerr("Library shutdown failed: %s\n", err->message);
+		g_error_free(err);
+	}
 #endif
 }
