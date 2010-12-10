@@ -220,7 +220,6 @@ int main(int argc, char* argv[]) {
 	GOptionContext *opt;
 	GError *err = NULL;
 
-	const gchar* in;
 	const gchar* out;
 	gchar* outbuf;
 	gint ret = !EX_OK;
@@ -271,7 +270,7 @@ int main(int argc, char* argv[]) {
 	if (passbuf)
 		mirage_set_password(passbuf);
 
-	if (!newargv || !(in = newargv[0])) {
+	if (!newargv || !newargv[0]) {
 		gchar* const helpmsg = g_option_context_get_help(opt, TRUE, NULL);
 		g_printerr("No input file specified\n%s", helpmsg);
 		g_free(helpmsg);
@@ -286,7 +285,7 @@ int main(int argc, char* argv[]) {
 	outbuf = NULL;
 	if (!out) {
 		if (!use_stdout) {
-			const gchar* ext = strrchr(in, '.');
+			const gchar* ext = strrchr(newargv[0], '.');
 
 			if (ext && !strcmp(ext, ".iso")) {
 				if (!force) {
@@ -299,7 +298,7 @@ int main(int argc, char* argv[]) {
 				ext = NULL;
 			}
 
-			outbuf = g_strdup_printf("%s.iso", in);
+			outbuf = g_strdup_printf("%s.iso", newargv[0]);
 			if (!force) {
 				FILE *tmp = fopen(outbuf, "r");
 				if (tmp || errno != ENOENT) {
@@ -332,14 +331,14 @@ int main(int argc, char* argv[]) {
 	if (verbose)
 		version(TRUE);
 
-	if (!miragewrap_open(in, session_num)) {
+	if (!miragewrap_open(newargv[0], session_num)) {
 		miragewrap_free();
 		g_strfreev(newargv);
 		mirage_forget_password();
 		return EX_NOINPUT;
 	}
 	if (verbose)
-		g_printerr("Input file '%s' open\n", in);
+		g_printerr("Input file '%s' open\n", newargv[0]);
 
 	{
 		gint tcount, i;
