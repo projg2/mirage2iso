@@ -112,8 +112,7 @@ static mirage_tristate_t mirage_pinentry_set(assuan_context_t ctx, const gchar* 
 }
 
 static mirage_tristate_t mirage_input_password_pinentry(void) {
-	const gchar* const shell = mirage_getshell();
-	const gchar* args[] = { shell, "-c", "exec pinentry", NULL };
+	const gchar* args[] = { NULL, "-c", "exec pinentry", NULL };
 	gint noclose[] = { -1 };
 	gchar *rcvbuf;
 	gsize rcvlen;
@@ -121,15 +120,17 @@ static mirage_tristate_t mirage_input_password_pinentry(void) {
 	assuan_context_t ctx;
 	assuan_error_t err;
 
+	args[0] = mirage_getshell();
+
 #ifdef HAVE_LIBASSUAN2
 	if (((err = assuan_new(&ctx))) != GPG_ERR_NO_ERROR) {
 		g_printerr("Failed to initialize libassuan: %s\n", assuan_strerror(err));
 		return error;
 	}
 
-	if (((err = assuan_pipe_connect(ctx, shell, args, noclose, NULL, NULL, 0))) != GPG_ERR_NO_ERROR) {
+	if (((err = assuan_pipe_connect(ctx, args[0], args, noclose, NULL, NULL, 0))) != GPG_ERR_NO_ERROR) {
 #else
-	if (((err = assuan_pipe_connect(&ctx, shell, args, noclose))) != ASSUAN_No_Error) {
+	if (((err = assuan_pipe_connect(&ctx, args[0], args, noclose))) != ASSUAN_No_Error) {
 #endif
 		g_printerr("Failed to launch pinentry: %s\n", assuan_strerror(err));
 		return error;
