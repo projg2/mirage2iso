@@ -299,6 +299,9 @@ int main(int argc, char* argv[]) {
 			}
 
 			outbuf = g_strdup_printf("%s.iso", newargv[0]);
+			if (ext) /* replace the extension in the duplicated string */
+				strcpy(&outbuf[ext - newargv[0] + 1], "iso");
+
 			if (!force) {
 				FILE *tmp = fopen(outbuf, "r");
 				if (tmp || errno != ENOENT) {
