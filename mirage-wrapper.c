@@ -62,7 +62,7 @@ gboolean miragewrap_init(void) {
 
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!((mirage = g_object_new(MIRAGE_TYPE_MIRAGE, NULL))))
-		return false;
+		return FALSE;
 #else
 	if (!libmirage_init(&err))
 		return miragewrap_err("Unable to init libmirage");
@@ -114,7 +114,7 @@ gboolean miragewrap_open(const gchar* const fn, const gint session_num) {
 #ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (!mirage) {
 		g_printerr("miragewrap_open() has to be called after miragewrap_init()\n");
-		return false;
+		return FALSE;
 	}
 #endif /* XXX: add some check for new API */
 
