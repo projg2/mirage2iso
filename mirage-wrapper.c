@@ -18,6 +18,7 @@
 #include <mirage.h>
 #include "mirage-compat.h"
 #include "mirage-password.h"
+#include "mirage-wrapper.h"
 
 extern gboolean quiet;
 extern gboolean verbose;

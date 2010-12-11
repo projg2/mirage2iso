@@ -27,6 +27,8 @@
 #	include <assuan.h>
 #endif
 
+#include "mirage-password.h"
+
 /* We use this ternary state like that:
  * - error means that something terrible has happened (I/O failure etc),
  * - success means requested operation succedeed,
