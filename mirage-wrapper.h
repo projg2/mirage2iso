@@ -13,7 +13,8 @@ const gchar* miragewrap_get_version(void);
 gboolean miragewrap_open(const gchar* const fn, const gint session_num);
 gint miragewrap_get_track_count(void);
 gsize miragewrap_get_track_size(const gint track_num);
-gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f);
+gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f,
+		void (*report_progress)(gint, gint, gint));
 void miragewrap_free(void);
 
 #endif

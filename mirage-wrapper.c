@@ -274,7 +274,8 @@ gsize miragewrap_get_track_size(const gint track_num) {
 	return expssize * (len-sstart);
 }
 
-gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f) {
+gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f,
+		void (*report_progress)(gint, gint, gint)) {
 	const gboolean use_mmap = !!out;
 	GError *err = NULL;
 	gint sstart, len, bufsize;
@@ -291,16 +292,19 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 
 	{
 		gint i, olen;
-		const gint vlen = quiet ? 0 : snprintf(NULL, 0, "%d", len); /* printf() accepts <= 0 */
 		guint8* buf = use_mmap ? out : g_malloc(bufsize);
 
 		len--; /* well, now it's rather 'last' */
+		if (!quiet)
+			report_progress(-1, 0, len);
 		for (i = sstart; i <= len; i++) {
 			if (!quiet && !(i % 64))
-				g_printerr("\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num, vlen, i, len, 100 * i / len);
+				report_progress(track_num, i, len);
 
 			if (!mirage_track_read_sector(track, i, FALSE, MIRAGE_MCSB_DATA, 0, buf, &olen, &err)) {
-				g_printerr("%sUnable to read sector %d: %s\n", quiet ? "" : "\n", i, err->message);
+				if (!quiet)
+					report_progress(-1, 0, 0);
+				g_printerr("Unable to read sector %d: %s\n", i, err->message);
 				g_object_unref(track);
 				if (!use_mmap)
 					g_free(buf);
@@ -309,8 +313,10 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 			}
 
 			if (olen != bufsize) {
-				g_printerr("%sData read returned %d bytes while %d was expected\n",
-						quiet ? "" : "\n", olen, bufsize);
+				if (!quiet)
+					report_progress(-1, 0, 0);
+				g_printerr("Data read returned %d bytes while %d was expected\n",
+						olen, bufsize);
 				g_object_unref(track);
 				if (!use_mmap)
 					g_free(buf);
@@ -319,7 +325,9 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 
 			if (!use_mmap) {
 				if (fwrite(buf, olen, 1, f) != 1) {
-					g_printerr("%sWrite failed on sector %d%s%s", quiet ? "" : "\n", i,
+					if (!quiet)
+						report_progress(-1, 0, 0);
+					g_printerr("Write failed on sector %d%s%s", i,
 							ferror(f) ? ": " : " but error flag not set\n",
 							ferror(f) ? g_strerror(errno) : "");
 					g_object_unref(track);
@@ -329,8 +337,11 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 			} else
 				buf += olen;
 		}
-		if (!quiet)
-			g_printerr("\rTrack: %2d, sector: %d of %d (100%%)\n", track_num, len, len);
+
+		if (!quiet) {
+			report_progress(track_num, len, len);
+			report_progress(-1, 0, 0);
+		}
 		if (!use_mmap)
 			g_free(buf);
 	}

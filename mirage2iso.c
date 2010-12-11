@@ -133,6 +133,19 @@ static gint stdio_open(const gchar* const fn, const gsize size, FILE** const f) 
 	return EX_OK;
 }
 
+static void report_progress(gint track_num, gint sect, gint sect_max) {
+	static gint vlen = 0;
+
+	if (track_num == -1 && !sect) { /* special state */
+		if (!sect_max) /* termination */
+			g_printerr("\n");
+		else /* initialization */
+			vlen = snprintf(NULL, 0, "%d", sect_max); /* printf() accepts <= 0 */
+	} else
+		g_printerr("\rTrack: %2d, sector: %*d of %d (%3d%%)", track_num,
+				vlen, sect, sect_max, 100 * sect / sect_max);
+}
+
 static gint output_track(const gchar* const fn, const gint track_num) {
 	const gboolean use_stdout = !fn;
 
@@ -174,7 +187,7 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 			g_printerr("Output file '%s' open for track %d\n", fn, track_num);
 	}
 
-	if (!miragewrap_output_track(out, track_num, f)) {
+	if (!miragewrap_output_track(out, track_num, f, &report_progress)) {
 #if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
 		if (out && munmap(out, size))
 			g_printerr("munmap() failed: %s", g_strerror(errno));
