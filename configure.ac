@@ -1,7 +1,7 @@
 AC_PREREQ([2.60])
 AC_INIT([mirage2iso], [0.3])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([1.6 foreign dist-bzip2 no-dependencies])
+AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 no-dependencies parallel-tests])
 
 AC_PROG_CC_C99
 AC_USE_SYSTEM_EXTENSIONS
@@ -26,5 +26,5 @@ AS_IF([test x"$ac_cv_sys_posix_termios" = x"yes"],
 	[AC_DEFINE([HAVE_TERMIOS], [1], [Define if you have termios headers and functions])])
 
 AC_CONFIG_HEADER([mirage-config.h])
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT
