@@ -3,14 +3,14 @@
 m2i=${1}
 input=${2}
 output=${2}.iso
-base=00_input.iso
+base=${srcdir}/00_input.iso
 
 echo "${input} -> ${output}"
 
 set -x
 case "$(basename "${input}")" in
 	04_*)
-		base2=00_second.iso
+		base2=${srcdir}/00_second.iso
 		output2=${output}.2
 
 		"${m2i}" -q -s 0 -p test "${input}" "${output}" && \
