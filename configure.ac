@@ -3,7 +3,7 @@ AC_INIT([mirage2iso], [0.3.1])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 no-dependencies parallel-tests])
 
-AC_PROG_CC_C99
+AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AM_PATH_GLIB_2_0([2.6.0],,
 	[AC_MSG_ERROR([This package requires >=glib-2.6.0 to compile])])
