@@ -8,6 +8,8 @@ AC_USE_SYSTEM_EXTENSIONS
 AM_PATH_GLIB_2_0([2.6.0],,
 	[AC_MSG_ERROR([This package requires >=glib-2.6.0 to compile])])
 PKG_CHECK_MODULES([LIBMIRAGE], [libmirage])
+
+AC_SYS_LARGEFILE
 AC_CHECK_FUNCS([ftruncate mmap posix_fallocate])
 
 AC_ARG_WITH([libassuan],
