@@ -5,9 +5,9 @@ AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 no-dependencies parallel-tests])
 
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
-AM_PATH_GLIB_2_0([2.6.0],,
-	[AC_MSG_ERROR([This package requires >=glib-2.6.0 to compile])])
-PKG_CHECK_MODULES([LIBMIRAGE], [libmirage])
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
+dnl vv - workaround for libmirage missing reqs - vv
+PKG_CHECK_MODULES([LIBMIRAGE], [libmirage gobject-2.0])
 
 AC_SYS_LARGEFILE
 AC_CHECK_FUNCS([ftruncate mmap posix_fallocate])
