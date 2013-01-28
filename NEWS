@@ -1,5 +1,8 @@
 * mirage2iso NEWS *
 
+== 0.4 / 28 Jan 2013
+	* rewrite for libmirage-2.0.0,
+	* removed mmap support.
 
 == 0.3 / 6 Feb 2010
 	* support for libassuan 2.0,

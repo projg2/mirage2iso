@@ -1,5 +1,5 @@
 AC_PREREQ([2.60])
-AC_INIT([mirage2iso], [0.3.1])
+AC_INIT([mirage2iso], [0.4])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 no-dependencies parallel-tests])
 
