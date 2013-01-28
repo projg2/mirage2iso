@@ -19,7 +19,7 @@
 #	include <fcntl.h>
 #	include <unistd.h>
 #else
-#	ifdef HAVE_FALLOCATE
+#	ifdef HAVE_POSIX_FALLOCATE
 #		include <fcntl.h>
 #	endif
 #endif
