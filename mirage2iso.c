@@ -12,16 +12,8 @@
 #include <string.h>
 #include <errno.h>
 
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-#	include <sys/types.h>
-#	include <sys/stat.h>
-#	include <sys/mman.h>
+#ifdef HAVE_POSIX_FALLOCATE
 #	include <fcntl.h>
-#	include <unistd.h>
-#else
-#	ifdef HAVE_POSIX_FALLOCATE
-#		include <fcntl.h>
-#	endif
 #endif
 
 #ifndef NO_SYSEXITS
@@ -44,10 +36,6 @@
 
 gboolean quiet = FALSE;
 gboolean verbose = FALSE;
-
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-static gboolean force_stdio = FALSE;
-#endif
 
 static void version(const gboolean mirage) {
 	const gchar* const ver = mirage ? miragewrap_get_version() : NULL;
@@ -80,40 +68,6 @@ static gboolean common_posix_filesetup(const int fd, const gsize size) {
 	return TRUE;
 }
 
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-static gint mmapio_open(const gchar* const fn, const gsize size, FILE** const f, gpointer* const out) {
-	int fd;
-	gpointer buf;
-
-	*f = fopen(fn, "w+b");
-	if (!*f) {
-		g_printerr("Unable to open output file: %s", g_strerror(errno));
-		return EX_CANTCREAT;
-	}
-
-	fd = fileno(*f);
-	if (!common_posix_filesetup(fd, size))
-		return EX_CANTCREAT;
-
-	if (ftruncate(fd, size) == -1) {
-		g_printerr("ftruncate() failed: %s", g_strerror(errno));
-
-		if (errno == EPERM || errno == EINVAL)
-			return EX_OK; /* we can't expand the file, so will try stdio */
-		else
-			return EX_IOERR;
-	}
-
-	buf = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
-	if (buf == MAP_FAILED)
-		g_printerr("mmap() failed: %s", g_strerror(errno));
-	else
-		*out = buf;
-
-	return EX_OK;
-}
-#endif
-
 static gint stdio_open(const gchar* const fn, const gsize size, FILE** const f) {
 	if (*f)
 		*f = freopen(fn, "wb", *f);
@@ -125,7 +79,7 @@ static gint stdio_open(const gchar* const fn, const gsize size, FILE** const f) 
 		return EX_CANTCREAT;
 	}
 
-#if (defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)) || defined(HAVE_POSIX_FALLOCATE)
+#if defined(HAVE_POSIX_FALLOCATE)
 	if (!common_posix_filesetup(fileno(*f), size))
 		return EX_CANTCREAT;
 #endif
@@ -151,7 +105,6 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 
 	gsize size = miragewrap_get_track_size(track_num);
 	FILE *f = NULL;
-	gpointer out = NULL;
 	gint ret = EX_OK;
 
 	if (size == 0)
@@ -163,13 +116,7 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 		if (verbose)
 			g_printerr("Using standard output stream for track %d\n", track_num);
 	} else {
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-		if (!force_stdio)
-			ret = mmapio_open(fn, size, &f, &out);
-#endif
-
-		if (!ret && !out)
-			ret = stdio_open(fn, size, &f);
+		ret = stdio_open(fn, size, &f);
 
 		if (ret) {
 			if (f) {
@@ -187,20 +134,11 @@ static gint output_track(const gchar* const fn, const gint track_num) {
 			g_printerr("Output file '%s' open for track %d\n", fn, track_num);
 	}
 
-	if (!miragewrap_output_track(out, track_num, f, &report_progress)) {
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-		if (out && munmap(out, size))
-			g_printerr("munmap() failed: %s", g_strerror(errno));
-#endif
+	if (!miragewrap_output_track(track_num, f, &report_progress)) {
 		if (!use_stdout && fclose(f))
 			g_printerr("fclose() failed: %s", g_strerror(errno));
 		return EX_IOERR;
 	}
-
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-	if (out && munmap(out, size))
-		g_printerr("munmap() failed: %s", g_strerror(errno));
-#endif
 
 	if (!use_stdout && fclose(f)) {
 		g_printerr("fclose() failed: %s", g_strerror(errno));
@@ -223,7 +161,6 @@ int main(int argc, char* argv[]) {
 		{ "password", 'p', 0, G_OPTION_ARG_STRING, NULL, "Password for the encrypted image", "PASS" },
 		{ "quiet", 'q', 0, G_OPTION_ARG_NONE, &quiet, "Disable progress reporting, output only errors", NULL },
 		{ "session", 's', 0, G_OPTION_ARG_INT, NULL, "Session to use (default: the last one)", "N" },
-		{ "stdio", 'S', 0, G_OPTION_ARG_NONE, &force_stdio, "Force using stdio instead of mmap()", NULL },
 		{ "stdout", 'c', 0, G_OPTION_ARG_NONE, NULL, "Output the image into stdout instead of a file", NULL },
 		{ "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Increase progress reporting verbosity", NULL },
 		{ "version", 'V', 0, G_OPTION_ARG_NONE, NULL, "Print program version and exit", NULL },
@@ -240,9 +177,9 @@ int main(int argc, char* argv[]) {
 	opts[0].arg_data = &force;
 	opts[1].arg_data = &passbuf;
 	opts[3].arg_data = &session_num;
-	opts[5].arg_data = &use_stdout;
-	opts[7].arg_data = &want_version;
-	opts[8].arg_data = &newargv;
+	opts[4].arg_data = &use_stdout;
+	opts[6].arg_data = &want_version;
+	opts[7].arg_data = &newargv;
 
 	opt = g_option_context_new(NULL);
 	g_option_context_add_main_entries(opt, opts, NULL);
@@ -270,12 +207,6 @@ int main(int argc, char* argv[]) {
 	}
 
 	if (use_stdout) {
-#if defined(HAVE_FTRUNCATE) && defined(HAVE_MMAP)
-		if (force_stdio && !quiet)
-			g_printerr("--stdout already implies --stdio, no need to specify it\n");
-		else
-			force_stdio = TRUE;
-#endif
 		if (force && !quiet)
 			g_printerr("--force has no effect when --stdout in use\n");
 	}

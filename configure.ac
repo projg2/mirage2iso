@@ -10,7 +10,7 @@ dnl vv - workaround for libmirage missing reqs - vv
 PKG_CHECK_MODULES([LIBMIRAGE], [libmirage gobject-2.0])
 
 AC_SYS_LARGEFILE
-AC_CHECK_FUNCS([ftruncate mmap posix_fallocate])
+AC_CHECK_FUNCS([posix_fallocate])
 
 AC_ARG_WITH([libassuan],
 	[AS_HELP_STRING([--without-libassuan],

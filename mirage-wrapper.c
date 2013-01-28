@@ -274,9 +274,8 @@ gsize miragewrap_get_track_size(const gint track_num) {
 	return expssize * (len-sstart);
 }
 
-gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE* const f,
+gboolean miragewrap_output_track(const gint track_num, FILE* const f,
 		void (*report_progress)(gint, gint, gint)) {
-	const gboolean use_mmap = !!out;
 	GError *err = NULL;
 	gint sstart, len, bufsize;
 	MIRAGE_Track *track;
@@ -292,7 +291,7 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 
 	{
 		gint i, olen;
-		guint8* buf = use_mmap ? out : g_malloc(bufsize);
+		guint8* buf = g_malloc(bufsize);
 
 		len--; /* well, now it's rather 'last' */
 		if (!quiet)
@@ -306,8 +305,7 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 					report_progress(-1, 0, 0);
 				g_printerr("Unable to read sector %d: %s\n", i, err->message);
 				g_object_unref(track);
-				if (!use_mmap)
-					g_free(buf);
+				g_free(buf);
 				g_error_free(err);
 				return FALSE;
 			}
@@ -318,32 +316,27 @@ gboolean miragewrap_output_track(gpointer const out, const gint track_num, FILE*
 				g_printerr("Data read returned %d bytes while %d was expected\n",
 						olen, bufsize);
 				g_object_unref(track);
-				if (!use_mmap)
-					g_free(buf);
+				g_free(buf);
 				return FALSE;
 			}
 
-			if (!use_mmap) {
-				if (fwrite(buf, olen, 1, f) != 1) {
-					if (!quiet)
-						report_progress(-1, 0, 0);
-					g_printerr("Write failed on sector %d%s%s", i,
-							ferror(f) ? ": " : " but error flag not set\n",
-							ferror(f) ? g_strerror(errno) : "");
-					g_object_unref(track);
-					g_free(buf);
-					return FALSE;
-				}
-			} else
-				buf += olen;
+			if (fwrite(buf, olen, 1, f) != 1) {
+				if (!quiet)
+					report_progress(-1, 0, 0);
+				g_printerr("Write failed on sector %d%s%s", i,
+						ferror(f) ? ": " : " but error flag not set\n",
+						ferror(f) ? g_strerror(errno) : "");
+				g_object_unref(track);
+				g_free(buf);
+				return FALSE;
+			}
 		}
 
 		if (!quiet) {
 			report_progress(track_num, len, len);
 			report_progress(-1, 0, 0);
 		}
-		if (!use_mmap)
-			g_free(buf);
+		g_free(buf);
 	}
 
 	g_object_unref(track);
