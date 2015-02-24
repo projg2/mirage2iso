@@ -8,6 +8,7 @@ AC_USE_SYSTEM_EXTENSIONS
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 dnl vv - workaround for libmirage missing reqs - vv
 PKG_CHECK_MODULES([LIBMIRAGE], [libmirage >= 2.0.0])
+PKG_CHECK_EXISTS([libmirage >= 3.0.0], [AC_DEFINE(HAVE_LIBMIRAGE3, [1], [Define if you have libmirage >= 3])])
 
 AC_SYS_LARGEFILE
 AC_CHECK_FUNCS([posix_fallocate])

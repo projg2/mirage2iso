@@ -15,7 +15,11 @@
 #include <string.h>
 #include <errno.h>
 
-#include <mirage.h>
+#if HAVE_LIBMIRAGE3
+#   include <mirage/mirage.h>
+#else
+#   include <mirage.h>
+#endif
 #include "mirage-password.h"
 #include "mirage-wrapper.h"
 
@@ -139,41 +143,78 @@ static MirageTrack *miragewrap_get_track_common(const gint track_num, gint *ssta
 		*len = mirage_track_layout_get_length(track);
 
 	if (sectsize) {
-		gint mode;
+		gint sector_type;
 		const gchar *unsupp_desc;
 
-		mode = mirage_track_get_mode(track);
+#if MIRAGE_VERSION_MAJOR >= 3
+		sector_type = mirage_track_get_sector_type(track);
+#else
+		sector_type = mirage_track_get_mode(track);
+#endif
 
 		unsupp_desc = NULL;
-		switch (mode) {
-			/* supported modes, we set *sectsize and leave unsupp_desc NULL */
+		switch (sector_type) {
+			/* supported sector types, we set *sectsize and leave unsupp_desc NULL */
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_MODE1:
+			case MIRAGE_SECTOR_MODE2_FORM1:
+#else
 			case MIRAGE_MODE_MODE1:
 			case MIRAGE_MODE_MODE2_FORM1:
+#endif
 				*sectsize = 2048;
 				break;
-			/* unsupported modes, we leave *sectsize unmodified and set unsupp_desc */
+			/* unsupported sector types, we leave *sectsize unmodified and set unsupp_desc */
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_MODE0:
+#else
 			case MIRAGE_MODE_MODE0:
+#endif
 				unsupp_desc = "a Mode 0";
 				break;
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_AUDIO:
+#else
 			case MIRAGE_MODE_AUDIO:
+#endif
 				unsupp_desc = "an audio";
 				break;
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_MODE2:
+#else
 			case MIRAGE_MODE_MODE2:
+#endif
 				unsupp_desc = "a Mode 2";
 				break;
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_MODE2_FORM2:
+#else
 			case MIRAGE_MODE_MODE2_FORM2:
+#endif
 				unsupp_desc = "a Mode 2 Form 2";
 				break;
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_MODE2_MIXED:
+#else
 			case MIRAGE_MODE_MODE2_MIXED:
+#endif
 				unsupp_desc = "a mixed Mode 2";
 				break;
-			/* unknown mode, report it even if non-verbose and leave now */
+#if MIRAGE_VERSION_MAJOR >= 3
+			case MIRAGE_SECTOR_RAW:
+				unsupp_desc = "a raw";
+				break;
+			case MIRAGE_SECTOR_RAW_SCRAMBLED:
+				unsupp_desc = "a scrambled raw";
+				break;
+#endif
+			/* unknown sector type, report it even if non-verbose and leave now */
 			default:
-				g_printerr("Unknown track mode (%d) for track %d (newer libmirage?)\n", mode, track_num);
+				g_printerr("Unknown track sector type / mode (%d) for track %d (newer libmirage?)\n", sector_type, track_num);
 				return NULL;
 		}
 
-		if (unsupp_desc) { /* got unsupported mode */
+		if (unsupp_desc) { /* got unsupported sector type */
 			if (verbose)
 				g_printerr("Track %d is %s track (unsupported)\n", track_num, unsupp_desc);
 			return NULL;
