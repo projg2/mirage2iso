@@ -1,5 +1,8 @@
 * mirage2iso NEWS *
 
+== 0.4.1 / 24 Feb 2015
+	* libmirage-3.0.0 support, thanks to Alexandre Rostovtsev.
+
 == 0.4 / 28 Jan 2013
 	* rewrite for libmirage-2.0.0,
 	* removed mmap support.
@@ -19,5 +22,5 @@
 	* compatible with libmirage up to 1.1.1.
 
 
-* (c) 2009/10 Michał Górny
+* (c) 2009-2015 Michał Górny
 * Released under the terms of the 3-clause BSD license.
