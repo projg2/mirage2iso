@@ -47,10 +47,8 @@ gboolean miragewrap_init(void) {
 	g_type_init();
 #endif
 
-#if !defined(MIRAGE_API12) || defined(MIRAGE_API20)
 	if (!((mirage = g_object_new(MIRAGE_TYPE_CONTEXT, NULL))))
 		return FALSE;
-#endif
 
 	if (!mirage_initialize(&err)) {
 		g_printerr("Unable to init libmirage: %s\n", err->message);
@@ -327,18 +325,9 @@ gboolean miragewrap_output_track(const gint track_num, FILE* const f,
 void miragewrap_free(void) {
 	GError *err;
 
-#ifdef MIRAGE_HAS_PASSWORD_SUPPORT
 	mirage_forget_password();
-#endif
 
 	if (session) g_object_unref(session);
 	if (disc) g_object_unref(disc);
-#ifdef MIRAGE_HAS_MIRAGE_OBJ
 	if (mirage) g_object_unref(mirage);
-#else
-	if (!mirage_shutdown(&err)) {
-		g_printerr("Library shutdown failed: %s\n", err->message);
-		g_error_free(err);
-	}
-#endif
 }
