@@ -1,5 +1,5 @@
 /* mirage2iso; libmirage interface
- * (c) 2009/10 Michał Górny
+ * (c) 2009-2015 Michał Górny
  * Released under the terms of the 3-clause BSD license.
  */
 
