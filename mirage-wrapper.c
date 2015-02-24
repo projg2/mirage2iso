@@ -39,7 +39,9 @@ gchar* miragewrap_password_callback(gpointer user_data) {
 gboolean miragewrap_init(void) {
 	GError *err = NULL;
 
+#if !defined(GLIB_VERSION_2_36)
 	g_type_init();
+#endif
 
 #if !defined(MIRAGE_API12) || defined(MIRAGE_API20)
 	if (!((mirage = g_object_new(MIRAGE_TYPE_CONTEXT, NULL))))
