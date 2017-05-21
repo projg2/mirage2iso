@@ -7,6 +7,9 @@ TESTS = 00_input.iso \
 	04_alcohol120_2.0.0.1331.mds \
 	04_nerolinux-4.0.0-multisession.nrg
 
+# not supported by libmirage at the moment
+#	01_magiciso-5.5.uif
+
 EXTRA_DIST = perform-test
 
 LOG_COMPILER = $(srcdir)/perform-test
