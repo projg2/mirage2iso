@@ -1,5 +1,6 @@
 TESTS = 00_input.iso \
 	01_ecm.iso.ecm \
+	01_psp.cso \
 	01_gburner-4.3.gbi \
 	01_poweriso_bin.bin 01_poweriso_bin.cue 01_poweriso_bin.toc \
 	02_poweriso-4.6-bestcompression.daa 02_poweriso-4.6-encrypted.daa \
