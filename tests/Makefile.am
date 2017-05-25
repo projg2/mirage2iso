@@ -10,14 +10,17 @@ TESTS = 00_input.iso \
 	04_alcohol120_2.0.0.1331.mds \
 	04_nerolinux-4.0.0-multisession.nrg
 
+if HAVE_WORKING_ISZ_DMG
+TESTS += \
+	20_ultraiso-9.6.6.3300.isz \
+	20_hdiutil_udbz.dmg \
+	20_hdiutil_udco.dmg \
+	20_hdiutil_udzo.dmg
+endif
+
 # not supported by libmirage at the moment
-#	01_magiciso-5.5.uif
-#	01_hdiutil_ulfo.dmg
-# segvs libmirage
-#	01_ultraiso-9.6.6.3300.isz
-#	01_hdiutil_udbz.dmg
-#	01_hdiutil_udco.dmg
-#	01_hdiutil_udzo.dmg
+#	21_hdiutil_ulfo.dmg
+#	22_magiciso-5.5.uif
 
 EXTRA_DIST = perform-test
 
