@@ -56,8 +56,12 @@ gboolean miragewrap_init(void) {
 		return FALSE;
 	}
 
-	mirage_context_set_password_function(mirage,
-			miragewrap_password_callback, NULL);
+	mirage_context_set_password_function(mirage, miragewrap_password_callback,
+/* mirage-3.0.5 introduces extra destroy notify for userdata */
+#if (MIRAGE_VERSION_MAJOR * 0x10000 + MIRAGE_VERSION_MINOR * 0x100 + MIRAGE_VERSION_MICRO) >= 0x30005
+			NULL,
+#endif
+			NULL);
 
 	return TRUE;
 }
