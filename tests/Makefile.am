@@ -12,12 +12,12 @@ TESTS = 00_input.iso \
 
 # not supported by libmirage at the moment
 #	01_magiciso-5.5.uif
+#	01_hdiutil_ulfo.dmg
 # segvs libmirage
 #	01_ultraiso-9.6.6.3300.isz
 #	01_hdiutil_udbz.dmg
 #	01_hdiutil_udco.dmg
 #	01_hdiutil_udzo.dmg
-#	01_hdiutil_ulfo.dmg
 
 EXTRA_DIST = perform-test
 
