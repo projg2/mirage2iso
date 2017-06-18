@@ -42,7 +42,7 @@ LOG_COMPILER = $(srcdir)/perform-test
 AM_LOG_FLAGS = $(top_builddir)/mirage2iso $(srcdir) $(builddir)
 
 check-tests-extra:
-	@if [ ! -f $(srcdir)/00_input.iso ]; then echo 'Please download:'; echo 'https://github.com/mgorny/mirage2iso/releases/download/mirage2iso-0.3/mirage2iso-0.3-tests.tar.xz'; echo 'unpack it, then copy files from its tests subdirectory to our tests directory.'; false; fi
+	@if [ ! -f $(srcdir)/00_input.iso ]; then echo 'Please download:'; echo 'https://github.com/mgorny/mirage2iso/releases/download/mirage2iso-0.4.2/mirage2iso-0.4.2-tests.tar.xz'; echo 'unpack it, then copy files from its tests subdirectory to our tests directory.'; false; fi
 
 check-am: check-tests-extra
 
