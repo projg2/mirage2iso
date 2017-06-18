@@ -1,4 +1,4 @@
-TESTS = 00_input.iso \
+BASE_TESTS = 00_input.iso \
 	01_ecm.iso.ecm \
 	01_psp.cso \
 	01_gburner-4.3.gbi \
@@ -10,19 +10,33 @@ TESTS = 00_input.iso \
 	04_alcohol120_2.0.0.1331.mds \
 	04_nerolinux-4.0.0-multisession.nrg
 
-if HAVE_WORKING_ISZ_DMG
-TESTS += \
+EXTRA_TEST_FILES = \
+	00_second.iso \
+	01_ultraiso-9.6.6.3300.sub \
+	02_poweriso-4.6-split1.part02.daa 02_poweriso-4.6-split2.part002.daa 02_poweriso-4.6-split3.d00 \
+	04_alcohol120_2.0.0.1331.mdf
+
+ISZ_DMG_TESTS = \
 	20_ultraiso-9.6.6.3300.isz \
 	20_hdiutil_udbz.dmg \
 	20_hdiutil_udco.dmg \
 	20_hdiutil_udzo.dmg
-endif
 
 # not supported by libmirage at the moment
-#	21_hdiutil_ulfo.dmg
-#	22_magiciso-5.5.uif
+NOT_SUPPORTED_TESTS = \
+	21_hdiutil_ulfo.dmg \
+	22_magiciso-5.5.uif
 
-EXTRA_DIST = perform-test
+TESTS = $(BASE_TESTS)
+if HAVE_WORKING_ISZ_DMG
+TESTS += $(ISZ_DMG_TESTS)
+endif
+
+EXTRA_DIST = perform-test \
+	$(BASE_TESTS) \
+	$(EXTRA_TEST_FILES) \
+	$(ISZ_DMG_TESTS) \
+	$(NOT_SUPPORTED_TESTS)
 
 LOG_COMPILER = $(srcdir)/perform-test
 AM_LOG_FLAGS = $(top_builddir)/mirage2iso
