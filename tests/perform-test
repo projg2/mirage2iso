@@ -1,8 +1,10 @@
 #!/bin/sh
 
 m2i=${1}
-input=${2}
-output=${2}.iso
+srcdir=${2}
+builddir=${3}
+input=${4}
+output=${builddir}/${input##*/}.iso
 base=${srcdir}/00_input.iso
 
 echo "${input} -> ${output}"
