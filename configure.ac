@@ -1,7 +1,7 @@
 AC_PREREQ([2.60])
 AC_INIT([mirage2iso], [0.4.1])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 no-dependencies parallel-tests subdir-objects])
+AM_INIT_AUTOMAKE([1.11 foreign no-dependencies parallel-tests subdir-objects])
 
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
