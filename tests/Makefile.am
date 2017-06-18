@@ -48,5 +48,6 @@ check-am: check-tests-extra
 
 clean-tests-extra:
 	for t in $(TESTS); do rm -f $${t}.iso $${t}.iso.2; done
+	rm -f *.log *.trs
 
 clean-am: clean-tests-extra
